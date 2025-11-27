@@ -1,0 +1,2126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador PRA - Tecnología y Digitalización</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .step-active { @apply border-blue-600 text-blue-600 bg-blue-50; }
+        .step-inactive { @apply border-gray-200 text-gray-400; }
+        .subject-card { @apply p-4 rounded-lg border border-slate-200 bg-white transition-all; }
+        .subject-card.active { @apply border-blue-500 bg-blue-50; }
+        .criteria-checkbox { position: relative; }
+        .criteria-checkbox input[type="checkbox"] { 
+            position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; z-index: 2; 
+        }
+        .criteria-checkbox .checkmark {
+            position: absolute; top: 0.625rem; left: 0.75rem; width: 1.25rem; height: 1.25rem;
+            border: 2px solid #cbd5e1; border-radius: 0.25rem; background: white; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .criteria-checkbox input[type="checkbox"]:checked + .checkmark {
+            background-color: #3b82f6; border-color: #3b82f6;
+        }
+        .criteria-checkbox input[type="checkbox"]:checked + .checkmark::after {
+            content: "✓"; color: white; font-weight: bold; font-size: 0.875rem;
+        }
+        .criteria-checkbox input[type="checkbox"]:checked ~ .criteria-content {
+            @apply bg-blue-50 border-blue-500 text-blue-700;
+        }
+        
+        /* Colores por materia */
+        .subject-card.cyr1 { border-left: 4px solid #bbf7d0; }
+        .subject-card.cyr2 { border-left: 4px solid #4ade80; }
+        .subject-card.cyr3 { border-left: 4px solid #16a34a; }
+        .subject-card.tyd2 { border-left: 4px solid #93c5fd; }
+        .subject-card.tyd3 { border-left: 4px solid #3b82f6; }
+        
+        .subject-card.cyr1.active { background-color: #f0fdf4; border-color: #bbf7d0; }
+        .subject-card.cyr2.active { background-color: #dcfce7; border-color: #4ade80; }
+        .subject-card.cyr3.active { background-color: #bbf7d0; border-color: #16a34a; }
+        .subject-card.tyd2.active { background-color: #dbeafe; border-color: #93c5fd; }
+        .subject-card.tyd3.active { background-color: #dbeafe; border-color: #3b82f6; }
+        
+        .criteria-section.cyr1 { border-left: 4px solid #bbf7d0; background-color: #f0fdf4; }
+        .criteria-section.cyr2 { border-left: 4px solid #4ade80; background-color: #dcfce7; }
+        .criteria-section.cyr3 { border-left: 4px solid #16a34a; background-color: #bbf7d0; }
+        .criteria-section.tyd2 { border-left: 4px solid #93c5fd; background-color: #dbeafe; }
+        .criteria-section.tyd3 { border-left: 4px solid #3b82f6; background-color: #dbeafe; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .gist-item { transition: all 0.2s; }
+        .gist-item:hover { background-color: #f8fafc; }
+        .gist-actions { opacity: 0; transition: opacity 0.2s; }
+        .gist-item:hover .gist-actions { opacity: 1; }
+        
+        /* Estilos para campos adicionales */
+        .additional-field-section { 
+            @apply p-4 rounded-lg border border-slate-200 transition-all mb-4;
+        }
+        .additional-field-section h3 { 
+            @apply font-semibold mb-3 flex items-center gap-2;
+        }
+        .additional-field-item { 
+            @apply flex items-start gap-3 p-2 rounded transition-colors;
+        }
+        
+        /* Colores tenues para cada sección */
+        .section-metodologia {
+            background-color: #f0f9ff;
+            border-left: 4px solid #0ea5e9;
+        }
+        .section-metodologia h3 {
+            color: #0369a1;
+        }
+        .section-metodologia .additional-field-item:hover {
+            background-color: #e0f2fe;
+        }
+        
+        .section-actividades {
+            background-color: #f0fdf4;
+            border-left: 4px solid #22c55e;
+        }
+        .section-actividades h3 {
+            color: #15803d;
+        }
+        .section-actividades .additional-field-item:hover {
+            background-color: #dcfce7;
+        }
+        
+        .section-acceso {
+            background-color: #fefce8;
+            border-left: 4px solid #eab308;
+        }
+        .section-acceso h3 {
+            color: #a16207;
+        }
+        .section-acceso .additional-field-item:hover {
+            background-color: #fef9c3;
+        }
+        
+        .section-recursos {
+            background-color: #fdf4ff;
+            border-left: 4px solid #c026d3;
+        }
+        .section-recursos h3 {
+            color: #86198f;
+        }
+        .section-recursos .additional-field-item:hover {
+            background-color: #fae8ff;
+        }
+        
+        .section-agrupamientos {
+            background-color: #f8fafc;
+            border-left: 4px solid #64748b;
+        }
+        .section-agrupamientos h3 {
+            color: #475569;
+        }
+        .section-agrupamientos .additional-field-item:hover {
+            background-color: #f1f5f9;
+        }
+        
+        .section-evaluacion {
+            background-color: #fef7ed;
+            border-left: 4px solid #f97316;
+        }
+        .section-evaluacion h3 {
+            color: #c2410c;
+        }
+        .section-evaluacion .additional-field-item:hover {
+            background-color: #ffedd5;
+        }
+
+        /* Estilos para área de carga de archivos */
+        .file-upload-area {
+            border: 2px dashed #cbd5e1;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .file-upload-area:hover, .file-upload-area.dragover {
+            border-color: #3b82f6;
+            background-color: #f0f9ff;
+        }
+
+        /* Estilos para el campo de tareas */
+        .tareas-textarea-container {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+            display: none;
+        }
+        .tareas-textarea-container.show {
+            display: block;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col">
+    <header class="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <div class="bg-blue-600 text-white p-2 rounded-lg"><i data-lucide="file-check-2"></i></div>
+                <h1 class="text-xl font-bold text-slate-800 hidden sm:block">Generador PRA</h1>
+            </div>
+            <div class="text-sm text-slate-500 font-medium">Refuerzo de Aprendizaje</div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-5xl mx-auto w-full p-4 sm:p-6 space-y-6">
+        <div class="grid grid-cols-4 gap-4 mb-8">
+            <div id="step1-ind" class="border-b-4 py-2 text-center font-semibold text-sm step-active">1. Alumno</div>
+            <div id="step2-ind" class="border-b-4 py-2 text-center font-semibold text-sm step-inactive">2. Materias</div>
+            <div id="step3-ind" class="border-b-4 py-2 text-center font-semibold text-sm step-inactive">3. Metodología</div>
+            <div id="step4-ind" class="border-b-4 py-2 text-center font-semibold text-sm step-inactive">4. Informe</div>
+        </div>
+
+        <!-- Pantalla 1: Datos del Alumno -->
+        <section id="screen-1" class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="user"></i> Datos del Alumno</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div><label class="text-sm font-medium text-slate-600">Nombre</label><input type="text" id="nombre" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej: Juan"></div>
+                <div><label class="text-sm font-medium text-slate-600">Primer Apellido</label><input type="text" id="apellido1" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej: García"></div>
+                <div><label class="text-sm font-medium text-slate-600">Segundo Apellido</label><input type="text" id="apellido2" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Ej: López"></div>
+                <div><label class="text-sm font-medium text-slate-600">Grupo</label>
+                    <select id="grupo" onchange="updateTutor()" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                        <option value="">Selecciona un grupo...</option>
+                        <option value="4º A">4º ESO A</option>
+                        <option value="4º B">4º ESO B</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Checkbox para indicar si cursa TEC4 -->
+            <div class="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <label class="flex items-start gap-3 p-3 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 cursor-pointer">
+                    <input type="checkbox" id="cursa-tec4" class="mt-1" checked>
+                    <div>
+                        <div class="font-medium text-slate-800">El alumno cursa TEC4</div>
+                        <div class="text-xs text-slate-500 mt-1">Si no se marca, el programa se basará en las materias pendientes y sus criterios, con una propuesta de actividades específica.</div>
+                    </div>
+                </label>
+            </div>
+            
+            <div class="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <h3 class="font-medium text-slate-700 mb-3 flex items-center gap-2"><i data-lucide="settings" class="w-4 h-4"></i> Tipo de Programa de Refuerzo</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <label class="flex items-start gap-3 p-3 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 cursor-pointer">
+                        <input type="checkbox" id="pra-materia-pendiente" class="mt-1">
+                        <div><div class="font-medium text-slate-800">PRA por materia pendiente</div><div class="text-xs text-slate-500 mt-1">Alumno con materias suspensas de cursos anteriores</div></div>
+                    </label>
+                    <label class="flex items-start gap-3 p-3 border border-slate-200 rounded-lg bg-white hover:bg-slate-50 cursor-pointer">
+                        <input type="checkbox" id="pra-repeticion" class="mt-1">
+                        <div><div class="font-medium text-slate-800">PRA por repetición</div><div class="text-xs text-slate-500 mt-1">Alumno que repite curso con materias suspensas</div></div>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100 flex items-center gap-2 text-slate-600">
+                <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                <span class="text-sm font-medium">Tutora asignada: <span id="tutor-display" class="text-blue-600 font-bold">---</span></span>
+            </div>
+
+            <!-- Sección recuperada: Cargar expediente existente -->
+            <div class="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="font-medium text-slate-700 flex items-center gap-2">
+                        <i data-lucide="download" class="w-4 h-4"></i> Cargar expediente existente
+                    </h3>
+                    <button onclick="loadExistingGists()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors flex items-center gap-1">
+                        <i data-lucide="refresh-cw" class="w-3 h-3"></i> Actualizar
+                    </button>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="password" id="github-token-load" placeholder="Token Personal de GitHub (ghp_...)" class="flex-grow p-2 border border-slate-300 rounded text-sm">
+                    <button onclick="loadExistingGists()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+                        <i data-lucide="search" class="w-4 h-4"></i> Buscar expedientes
+                    </button>
+                </div>
+                <div id="gist-list" class="mt-3 space-y-2 hidden">
+                    <p class="text-xs text-slate-500">Selecciona un expediente para cargar o gestionar:</p>
+                    <div id="gist-options" class="max-h-60 overflow-y-auto custom-scrollbar space-y-2">
+                        <!-- Opciones de gists cargados dinámicamente -->
+                    </div>
+                </div>
+                <p id="load-status" class="text-xs mt-2 min-h-[1.5em]"></p>
+            </div>
+
+            <div class="mt-6 flex justify-between">
+                <button onclick="resetData()" class="bg-slate-500 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i> Reiniciar Datos
+                </button>
+                <button onclick="goToStep(2)" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                    Siguiente <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Pantalla 2: Materias y Criterios -->
+        <section id="screen-2" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2"><i data-lucide="book-open"></i> Selección de Materias Pendientes</h2>
+                <div class="text-sm text-slate-500"><span id="selected-subjects-count">0</span> materias seleccionadas</div>
+            </div>
+
+            <div class="mb-8">
+                <p class="text-sm text-slate-500 mb-4">Selecciona las materias que el alumno tiene suspensas:</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="space-y-4">
+                        <div class="subject-card cyr1" data-subject="CYR1"><div class="flex items-start gap-3"><input type="checkbox" id="subject-CYR1" class="mt-1" onchange="toggleSubject('CYR1')"><div><label for="subject-CYR1" class="font-medium text-slate-800 cursor-pointer">Computación y Robótica 1º</label><p class="text-xs text-slate-500 mt-1">Selecciona para ver sus criterios</p></div></div></div>
+                        <div class="subject-card cyr2" data-subject="CYR2"><div class="flex items-start gap-3"><input type="checkbox" id="subject-CYR2" class="mt-1" onchange="toggleSubject('CYR2')"><div><label for="subject-CYR2" class="font-medium text-slate-800 cursor-pointer">Computación y Robótica 2º</label><p class="text-xs text-slate-500 mt-1">Selecciona para ver sus criterios</p></div></div></div>
+                        <div class="subject-card cyr3" data-subject="CYR3"><div class="flex items-start gap-3"><input type="checkbox" id="subject-CYR3" class="mt-1" onchange="toggleSubject('CYR3')"><div><label for="subject-CYR3" class="font-medium text-slate-800 cursor-pointer">Computación y Robótica 3º</label><p class="text-xs text-slate-500 mt-1">Selecciona para ver sus criterios</p></div></div></div>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="subject-card tyd2" data-subject="TYD2"><div class="flex items-start gap-3"><input type="checkbox" id="subject-TYD2" class="mt-1" onchange="toggleSubject('TYD2')"><div><label for="subject-TYD2" class="font-medium text-slate-800 cursor-pointer">Tecnología y Digitalización 2º</label><p class="text-xs text-slate-500 mt-1">Selecciona para ver sus criterios</p></div></div></div>
+                        <div class="subject-card tyd3" data-subject="TYD3"><div class="flex items-start gap-3"><input type="checkbox" id="subject-TYD3" class="mt-1" onchange="toggleSubject('TYD3')"><div><label for="subject-TYD3" class="font-medium text-slate-800 cursor-pointer">Tecnología y Digitalización 3º</label><p class="text-xs text-slate-500 mt-1">Selecciona para ver sus criterios</p></div></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="criteria-container" class="space-y-6 mb-8 hidden">
+                <p class="text-sm text-slate-500">Marca los criterios que el alumno tiene <strong>suspensos</strong> o necesita reforzar en cada materia:</p>
+                <div id="criteria-lists" class="space-y-6 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar"></div>
+            </div>
+
+            <div class="flex justify-between mt-6 pt-6 border-t border-slate-100">
+                <button onclick="goToStep(1)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2 rounded-lg transition-colors">Atrás</button>
+                <button id="btn-calculate" onclick="nextFromStep2()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 opacity-50 cursor-not-allowed" disabled>
+                    Siguiente <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Pantalla 3: Campos Adicionales (solo para alumnos que cursan TEC4) -->
+        <section id="screen-3" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="settings"></i> Metodología y Recursos</h2>
+            <p class="text-sm text-slate-500 mb-6">Selecciona las estrategias, recursos y metodologías que se aplicarán en el programa de refuerzo:</p>
+            
+            <div id="additional-fields-container" class="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                <!-- Los campos adicionales se generan dinámicamente aquí -->
+            </div>
+
+            <div class="flex justify-between mt-6 pt-6 border-t border-slate-100">
+                <button onclick="goToStep(2)" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2 rounded-lg transition-colors">Atrás</button>
+                <button onclick="calculatePlan()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                    Generar Programa <i data-lucide="wand-2" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </section>
+
+        <!-- Pantalla 4: Resultados y Exportación -->
+        <section id="screen-4" class="hidden bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+            <h2 class="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="file-text"></i> Programa de Refuerzo Generado</h2>
+
+            <!-- Sección para alumnos que cursan TEC4 -->
+            <div id="tec4-section" class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <h3 class="text-green-800 font-bold text-sm uppercase tracking-wide mb-2">Criterios de TEC4 a trabajar</h3>
+                <p class="text-sm text-green-700 mb-3">Basado en las carencias detectadas en las materias pendientes, estos son los criterios de Tecnología de 4º que deben trabajarse:</p>
+                <ul id="result-list" class="space-y-2 text-sm text-slate-700 bg-white p-4 rounded border border-green-100 shadow-sm max-h-60 overflow-y-auto"></ul>
+            </div>
+
+            <!-- Sección para alumnos que NO cursan TEC4 -->
+            <div id="no-tec4-section" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 hidden">
+                <h3 class="text-blue-800 font-bold text-sm uppercase tracking-wide mb-2">Materias pendientes y criterios a superar</h3>
+                <p class="text-sm text-blue-700 mb-3">El alumno no cursa TEC4, por lo que el programa se basará en un conjunto de actividades relacionadas con la(s) materia(s) pendiente(s) y sus criterios.</p>
+                <div id="no-tec4-criteria" class="space-y-4 text-sm text-slate-700 bg-white p-4 rounded border border-blue-100 shadow-sm max-h-60 overflow-y-auto mb-4"></div>
+                
+                <div class="mt-4">
+                    <label class="block text-sm font-medium text-slate-700 mb-2">Propuesta de actividades</label>
+                    <textarea id="propuesta-actividades" rows="4" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Describe las actividades propuestas para el refuerzo..."></textarea>
+                </div>
+            </div>
+
+            <div class="mb-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                <h3 class="font-medium text-slate-700 mb-2 flex items-center gap-2"><i data-lucide="github" class="w-4 h-4"></i> Guardar en GitHub Gist</h3>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <input type="password" id="github-token" placeholder="Token Personal de GitHub (ghp_...)" class="flex-grow p-2 border border-slate-300 rounded text-sm">
+                    <button onclick="saveToGist()" class="bg-gray-800 hover:bg-gray-900 text-white px-4 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 whitespace-nowrap">
+                        <i data-lucide="save" class="w-4 h-4"></i> Guardar Gist
+                    </button>
+                </div>
+                <p id="gist-status" class="text-xs mt-2 min-h-[1.5em]"></p>
+            </div>
+
+            <div class="flex justify-between pt-4 border-t border-slate-100">
+                <button onclick="backFromStep4()" class="text-slate-500 hover:text-slate-700 font-medium px-4 py-2 rounded-lg transition-colors">Atrás</button>
+                <div class="flex gap-2">
+                    <button onclick="resetData()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Nuevo Programa
+                    </button>
+                    <button onclick="generatePDF()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg shadow-red-100">
+                        <i data-lucide="file-down" class="w-4 h-4"></i> Descargar PDF
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // --- CONFIGURACIÓN ---
+        const tutores = { "4º A": "Ángela Fuentes Fernández", "4º B": "Francisca Aguayo Moral" };
+        
+        const equivalentCriteria = {
+            "CYR1": { 
+                "CYR.1.1.1.": "CYR.2.1.1.", "CYR.1.1.2.": "CYR.2.1.2.", "CYR.1.1.3.": "CYR.2.1.3.", "CYR.1.1.4.": "CYR.2.1.4.", 
+                "CYR.1.2.1.": "CYR.2.2.1.", "CYR.1.2.3.": "CYR.2.2.3.", "CYR.1.3.1.": "CYR.2.3.1.", "CYR.1.4.1.": "CYR.2.4.1.", 
+                "CYR.1.4.2.": "CYR.2.4.2.", "CYR.1.5.1.": "CYR.2.5.1.", "CYR.1.5.2.": "CYR.2.5.2.", "CYR.1.6.1.": "CYR.2.6.1.", 
+                "CYR.1.6.2.": "CYR.2.6.2.", "CYR.1.6.3.": "CYR.2.6.3.", "CYR.1.6.4.": "CYR.2.6.4." 
+            },
+            "CYR2": { 
+                "CYR.2.1.1.": "CYR.3.1.1.", "CYR.2.1.2.": "CYR.3.1.2.", "CYR.2.1.3.": "CYR.3.1.3.", "CYR.2.1.4.": "CYR.3.1.4.", 
+                "CYR.2.2.1.": "CYR.3.2.1.", "CYR.2.2.2.": "CYR.3.2.2.", "CYR.2.2.3.": "CYR.3.2.3.", "CYR.2.3.1.": "CYR.3.3.1.", 
+                "CYR.2.4.1.": "CYR.3.4.1.", "CYR.2.4.2.": "CYR.3.4.2.", "CYR.2.5.1.": "CYR.3.5.1.", "CYR.2.5.2.": "CYR.3.5.2.", 
+                "CYR.2.6.1.": "CYR.3.6.1.", "CYR.2.6.2.": "CYR.3.6.2.", "CYR.2.6.3.": "CYR.3.6.3.", "CYR.2.6.4.": "CYR.3.6.4." 
+            },
+            "CYR1_to_CYR3": { 
+                "CYR.1.1.1.": "CYR.3.1.1.", "CYR.1.1.2.": "CYR.3.1.2.", "CYR.1.1.3.": "CYR.3.1.3.", "CYR.1.1.4.": "CYR.3.1.4.", 
+                "CYR.1.2.1.": "CYR.3.2.1.", "CYR.1.2.3.": "CYR.3.2.3.", "CYR.1.3.1.": "CYR.3.3.1.", "CYR.1.4.1.": "CYR.3.4.1.", 
+                "CYR.1.4.2.": "CYR.3.4.2.", "CYR.1.5.1.": "CYR.3.5.1.", "CYR.1.5.2.": "CYR.3.5.2.", "CYR.1.6.1.": "CYR.3.6.1.", 
+                "CYR.1.6.2.": "CYR.3.6.2.", "CYR.1.6.3.": "CYR.3.6.3.", "CYR.1.6.4.": "CYR.3.6.4." 
+            },
+            "TYD2": { 
+                "TYD.2.1.1.": "TYD.3.1.1.", "TYD.2.1.2.": "TYD.3.1.2.", "TYD.2.1.3.": "TYD.3.1.3.", "TYD.2.2.1.": "TYD.3.2.1.", 
+                "TYD.2.2.2.": "TYD.3.2.2.", "TYD.2.3.1.": "TYD.3.3.1.", "TYD.2.4.1.": "TYD.3.4.1.", "TYD.2.5.1.": "TYD.3.5.1.", 
+                "TYD.2.5.2.": "TYD.3.5.2.", "TYD.2.5.3.": "TYD.3.5.3.", "TYD.2.6.1.": "TYD.3.6.1.", "TYD.2.6.2.": "TYD.3.6.2.", 
+                "TYD.2.6.3.": "TYD.3.6.3.", "TYD.2.7.1.": "TYD.3.7.1.", "TYD.2.7.2.": "TYD.3.7.2." 
+            }
+        };
+
+        // Mapeo inverso para selección automática hacia abajo
+        const equivalentCriteriaInverse = {
+            "CYR3": { 
+                "CYR.3.1.1.": "CYR.2.1.1.", "CYR.3.1.2.": "CYR.2.1.2.", "CYR.3.1.3.": "CYR.2.1.3.", "CYR.3.1.4.": "CYR.2.1.4.", 
+                "CYR.3.2.1.": "CYR.2.2.1.", "CYR.3.2.2.": "CYR.2.2.2.", "CYR.3.2.3.": "CYR.2.2.3.", "CYR.3.3.1.": "CYR.2.3.1.", 
+                "CYR.3.4.1.": "CYR.2.4.1.", "CYR.3.4.2.": "CYR.2.4.2.", "CYR.3.5.1.": "CYR.2.5.1.", "CYR.3.5.2.": "CYR.2.5.2.", 
+                "CYR.3.6.1.": "CYR.2.6.1.", "CYR.3.6.2.": "CYR.2.6.2.", "CYR.3.6.3.": "CYR.2.6.3.", "CYR.3.6.4.": "CYR.2.6.4." 
+            },
+            "CYR2": { 
+                "CYR.2.1.1.": "CYR.1.1.1.", "CYR.2.1.2.": "CYR.1.1.2.", "CYR.2.1.3.": "CYR.1.1.3.", "CYR.2.1.4.": "CYR.1.1.4.", 
+                "CYR.2.2.1.": "CYR.1.2.1.", "CYR.2.2.3.": "CYR.1.2.3.", "CYR.2.3.1.": "CYR.1.3.1.", "CYR.2.4.1.": "CYR.1.4.1.", 
+                "CYR.2.4.2.": "CYR.1.4.2.", "CYR.2.5.1.": "CYR.1.5.1.", "CYR.2.5.2.": "CYR.1.5.2.", "CYR.2.6.1.": "CYR.1.6.1.", 
+                "CYR.2.6.2.": "CYR.1.6.2.", "CYR.2.6.3.": "CYR.1.6.3.", "CYR.2.6.4.": "CYR.1.6.4." 
+            },
+            "TYD3": { 
+                "TYD.3.1.1.": "TYD.2.1.1.", "TYD.3.1.2.": "TYD.2.1.2.", "TYD.3.1.3.": "TYD.2.1.3.", "TYD.3.2.1.": "TYD.2.2.1.", 
+                "TYD.3.2.2.": "TYD.2.2.2.", "TYD.3.3.1.": "TYD.2.3.1.", "TYD.3.4.1.": "TYD.2.4.1.", "TYD.3.5.1.": "TYD.2.5.1.", 
+                "TYD.3.5.2.": "TYD.2.5.2.", "TYD.3.5.3.": "TYD.2.5.3.", "TYD.3.6.1.": "TYD.2.6.1.", "TYD.3.6.2.": "TYD.2.6.2.", 
+                "TYD.3.6.3.": "TYD.2.6.3.", "TYD.3.7.1.": "TYD.2.7.1.", "TYD.3.7.2.": "TYD.2.7.2." 
+            }
+        };
+
+        // CORRELACIÓN CORREGIDA ENTRE MATERIAS PENDIENTES Y TEC4
+        const mapCYR_TEC4 = {
+            "1.1.": ["TEC.4.4.1."], 
+            "1.2.": ["TEC.4.4.1."], 
+            "1.3.": ["TEC.4.4.2."], 
+            "1.4.": ["TEC.4.4.1."],
+            "2.1.": ["TEC.4.4.2.", "TEC.4.3.1."], 
+            "2.2.": ["TEC.4.4.2.", "TEC.4.3.1."], 
+            "2.3.": ["TEC.4.4.2.", "TEC.4.3.1."],
+            "3.1.": ["TEC.4.4.1.", "TEC.4.2.2."], 
+            "4.1.": ["TEC.4.4.2."], 
+            "4.2.": ["TEC.4.4.2."], 
+            "4.3.": ["TEC.4.4.2."],
+            "5.1.": ["TEC.4.5.1."], 
+            "5.2.": ["TEC.4.5.1."], 
+            "6.1.": ["TEC.4.6.1."], 
+            "6.2.": ["TEC.4.6.1."], 
+            "6.3.": ["TEC.4.6.1."], 
+            "6.4.": ["TEC.4.6.1."]
+        };
+
+        const mapTYD_TEC4 = {
+            "1.1.": ["TEC.4.1.1."], 
+            "1.2.": [], 
+            "1.3.": ["TEC.4.6.1."],
+            "2.1.": ["TEC.4.1.2.", "TEC.4.1.3."], 
+            "2.2.": ["TEC.4.2.2."], 
+            "3.1.": ["TEC.4.2.1.", "TEC.4.2.2."],
+            "4.1.": ["TEC.4.3.1.", "TEC.4.3.2."], 
+            "5.1.": ["TEC.4.4.1."], 
+            "5.2.": ["TEC.4.4.2."], 
+            "5.3.": ["TEC.4.4.1."],
+            "6.1.": ["TEC.4.5.1."], 
+            "6.2.": ["TEC.4.5.1."], 
+            "6.3.": ["TEC.4.5.1."],
+            "7.1.": ["TEC.4.6.1.", "TEC.4.6.2."], 
+            "7.2.": ["TEC.4.6.3."]
+        };
+
+        const criteriaData = {
+            "CYR1": [
+                {id: "CYR.1.1.1.", text: "Comprender el funcionamiento global de los sistemas de computación física, sus componentes y principales características."},
+                {id: "CYR.1.1.2.", text: "Reconocer el papel de la robótica en nuestra sociedad, indicando el marco elemental de trabajo de los mismos."},
+                {id: "CYR.1.1.3.", text: "Entender la estructura básica de un programa informático."},
+                {id: "CYR.1.1.4.", text: "Comprender los principios básicos de ingeniería en los que se basan los robots."},
+                {id: "CYR.1.2.1.", text: "Conocer y resolver la variedad de problemas posibles, desarrollando un programa informático y generalizando las soluciones."},
+                {id: "CYR.1.2.3.", text: "Conocer y resolver la variedad de problemas posibles desarrollando una aplicación móvil."},
+                {id: "CYR.1.3.1.", text: "Ser capaz de construir un sistema de computación o robótico, promoviendo la interacción con el mundo físico."},
+                {id: "CYR.1.4.1.", text: "Conocer la naturaleza de los distintos tipos de datos generados hoy en día, siendo capaces de analizarlos."},
+                {id: "CYR.1.4.2.", text: "Comprender los principios básicos de funcionamiento de los agentes inteligentes y aprendizaje automático."},
+                {id: "CYR.1.5.1.", text: "Conocer la construcción de aplicaciones informáticas y web, entendiendo su funcionamiento interno."},
+                {id: "CYR.1.5.2.", text: "Conocer y resolver la variedad de problemas potencialmente presentes en el desarrollo de una aplicación web."},
+                {id: "CYR.1.6.1.", text: "Adoptar conductas y hábitos que permitan la protección del individuo en su interacción en la red."},
+                {id: "CYR.1.6.2.", text: "Acceder a servicios de intercambio y publicación de información digital aplicando criterios básicos de seguridad."},
+                {id: "CYR.1.6.3.", text: "Reconocer y comprender los derechos de los materiales alojados en la web."},
+                {id: "CYR.1.6.4.", text: "Adoptar conductas de seguridad activa y pasiva en la protección de datos."}
+            ],
+            "CYR2": [
+                {id: "CYR.2.1.1.", text: "Comprender el funcionamiento de los sistemas de computación física, sus componentes y principales características."},
+                {id: "CYR.2.1.2.", text: "Reconocer el papel de la robótica en nuestra sociedad, conociendo las aplicaciones más comunes."},
+                {id: "CYR.2.1.3.", text: "Entender cómo funciona un programa informático, la manera de elaborarlo y sus principales componentes."},
+                {id: "CYR.2.1.4.", text: "Comprender los principios de ingeniería en los que se basan los robots."},
+                {id: "CYR.2.2.1.", text: "Conocer y resolver la variedad de problemas posibles, desarrollando un programa informático."},
+                {id: "CYR.2.2.2.", text: "Entender el funcionamiento interno de las aplicaciones móviles y cómo se construyen."},
+                {id: "CYR.2.2.3.", text: "Conocer y resolver la variedad de problemas posibles desarrollando una aplicación móvil."},
+                {id: "CYR.2.3.1.", text: "Ser capaz de construir un sistema de computación o robótico, promoviendo la interacción con el mundo físico."},
+                {id: "CYR.2.4.1.", text: "Conocer las aplicaciones actuales del Big Data, así como la naturaleza de los distintos tipos de datos."},
+                {id: "CYR.2.4.2.", text: "Comprender los principios básicos de funcionamiento de los agentes inteligentes."},
+                {id: "CYR.2.5.1.", text: "Conocer la construcción de aplicaciones informáticas y web, entendiendo su funcionamiento interno."},
+                {id: "CYR.2.5.2.", text: "Conocer y resolver problemas presentes en el desarrollo de una aplicación web."},
+                {id: "CYR.2.6.1.", text: "Adoptar conductas y hábitos que permitan la protección activa del individuo en la red."},
+                {id: "CYR.2.6.2.", text: "Acceder a servicios de intercambio aplicando criterios de seguridad."},
+                {id: "CYR.2.6.3.", text: "Reconocer y comprender los derechos de los materiales alojados en Internet."},
+                {id: "CYR.2.6.4.", text: "Adoptar conductas de seguridad activa y pasiva en la protección de datos."}
+            ],
+            "CYR3": [
+                {id: "CYR.3.1.1.", text: "Comprender el funcionamiento de los sistemas de computación física, sus componentes y principales características."},
+                {id: "CYR.3.1.2.", text: "Reconocer los conceptos básicos de la robótica, así como las configuraciones morfológicas más comunes."},
+                {id: "CYR.3.1.3.", text: "Entender cómo funciona un programa informático, la manera de elaborarlo y sus principales componentes."},
+                {id: "CYR.3.1.4.", text: "Comprender los principios de ingeniería en los que se basan los robots."},
+                {id: "CYR.3.2.1.", text: "Conocer y resolver la variedad de problemas posibles, desarrollando un programa informático."},
+                {id: "CYR.3.2.2.", text: "Entender el funcionamiento interno de las aplicaciones móviles y cómo se construyen."},
+                {id: "CYR.3.2.3.", text: "Conocer y resolver la variedad de problemas posibles desarrollando una aplicación móvil."},
+                {id: "CYR.3.3.1.", text: "Ser capaz de construir un sistema de computación o robótico, promoviendo la interacción con el mundo físico."},
+                {id: "CYR.3.4.1.", text: "Conocer la naturaleza de los distintos tipos metadatos generados hoy en día."},
+                {id: "CYR.3.4.2.", text: "Comprender los principios básicos de funcionamiento de los agentes inteligentes."},
+                {id: "CYR.3.4.3.", text: "Comprender los principios de funcionamiento del Data Scraping."},
+                {id: "CYR.3.5.1.", text: "Conocer la construcción de aplicaciones informáticas y web."},
+                {id: "CYR.3.5.2.", text: "Conocer y resolver problemas en el desarrollo de una aplicación web."},
+                {id: "CYR.3.6.1.", text: "Adoptar conductas y hábitos que permitan la protección activa del individuo."},
+                {id: "CYR.3.6.2.", text: "Acceder a servicios de intercambio aplicando criterios de seguridad."},
+                {id: "CYR.3.6.3.", text: "Reconocer y comprender la propiedad intelectual de los materiales."},
+                {id: "CYR.3.6.4.", text: "Conocer las estrategias de ciberseguridad que garantizan protección."}
+            ],
+            "TYD2": [
+                {id: "TYD.2.1.1.", text: "Definir problemas sencillos o necesidades básicas planteadas."},
+                {id: "TYD.2.1.2.", text: "Comprender y examinar productos tecnológicos de uso habitual."},
+                {id: "TYD.2.1.3.", text: "Adoptar medidas preventivas para la protección de los dispositivos y datos."},
+                {id: "TYD.2.2.1.", text: "Idear y diseñar soluciones eficaces, innovadoras y sostenibles."},
+                {id: "TYD.2.2.2.", text: "Seleccionar, planificar y organizar los materiales y herramientas."},
+                {id: "TYD.2.3.1.", text: "Fabricar objetos o modelos sencillos mediante la manipulación de materiales."},
+                {id: "TYD.2.4.1.", text: "Representar y comunicar el proceso de creación de un producto sencillo."},
+                {id: "TYD.2.5.1.", text: "Describir, interpretar y diseñar soluciones a problemas informáticos sencillos."},
+                {id: "TYD.2.5.2.", text: "Programar aplicaciones sencillas para distintos dispositivos."},
+                {id: "TYD.2.5.3.", text: "Automatizar procesos, máquinas y objetos simples."},
+                {id: "TYD.2.6.1.", text: "Hacer un uso eficiente y seguro de los dispositivos digitales de uso cotidiano."},
+                {id: "TYD.2.6.2.", text: "Crear contenidos básicos y difundirlos en distintas plataformas."},
+                {id: "TYD.2.6.3.", text: "Organizar la información de manera estructurada."},
+                {id: "TYD.2.7.1.", text: "Reconocer la influencia de la actividad tecnológica en la sociedad."},
+                {id: "TYD.2.7.2.", text: "Identificar las aportaciones de las tecnologías emergentes al bienestar."}
+            ],
+            "TYD3": [
+                {id: "TYD.3.1.1.", text: "Definir problemas o necesidades planteadas, buscando información."},
+                {id: "TYD.3.1.2.", text: "Comprender y examinar productos tecnológicos de uso habitual."},
+                {id: "TYD.3.1.3.", text: "Adoptar medidas preventivas para la protección de los dispositivos."},
+                {id: "TYD.3.2.1.", text: "Idear y diseñar soluciones eficaces a problemas defined."},
+                {id: "TYD.3.2.2.", text: "Seleccionar, planificar y organizar tareas para la construcción de soluciones."},
+                {id: "TYD.3.3.1.", text: "Fabricar objetos o modelos mediante la manipulación de materiales."},
+                {id: "TYD.3.4.1.", text: "Representar y comunicar el proceso de creación de un producto."},
+                {id: "TYD.3.5.1.", text: "Describir, interpretar y diseñar soluciones a problemas informáticos."},
+                {id: "TYD.3.5.2.", text: "Programar aplicaciones sencillas para distintos dispositivos."},
+                {id: "TYD.3.5.3.", text: "Automatizar procesos, máquinas y objetos de manera autónoma."},
+                {id: "TYD.3.6.1.", text: "Hacer un uso eficiente y seguro de los dispositivos digitales."},
+                {id: "TYD.3.6.2.", text: "Crear contenidos, elaborar materiales y difundirlos."},
+                {id: "TYD.3.6.3.", text: "Organizar la información de manera estructurada."},
+                {id: "TYD.3.7.1.", text: "Reconocer la influencia de la actividad tecnológica en la sociedad."},
+                {id: "TYD.3.7.2.", text: "Identificar las aportaciones básicas de las tecnologías emergentes."}
+            ]
+        };
+
+        const tec4Criteria = {
+            "TEC.4.1.1.": "Idear y planificar soluciones tecnológicas emprendedoras que generen un valor para la comunidad, a partir de la observación y el análisis del entorno más cercano, estudiando sus necesidades, requisitos y posibilidades de mejora.",
+            "TEC.4.1.2.": "Aplicar con iniciativa estrategias colaborativas de gestión de proyectos con una perspectiva interdisciplinar y siguiendo un proceso iterativo de validación, desde la fase de ideación hasta la difusión de la solución.",
+            "TEC.4.1.3.": "Abordar la gestión del proyecto de forma creativa, aplicando estrategias y técnicas colaborativas adecuadas, así como métodos de investigación en la ideación de soluciones lo más eficientes, accesibles e innovadoras posibles.",
+            "TEC.4.2.1.": "Analizar el diseño de un producto que dé respuesta a una necesidad planteada, evaluando su demanda, evolución y previsión de fin de ciclo de vida con un criterio ético, responsable e inclusivo.",
+            "TEC.4.2.2.": "Fabricar productos y soluciones tecnológicas, aplicando herramientas de diseño asistido, técnicas de elaboración manual, mecánica y digital y utilizando los materiales y recursos mecánicos, eléctricos, electrónicos y digitales adecuados.",
+            "TEC.4.3.1.": "Intercambiar información y fomentar el trabajo en equipo de manera asertiva, empleando las herramientas digitales adecuadas junto con el vocabulario técnico, símbolos y esquemas de sistemas tecnológicos apropiados.",
+            "TEC.4.3.2.": "Presentar y difundir las propuestas o soluciones tecnológicas de manera efectiva, empleando la entonación, expresión, gestión del tiempo y adaptación adecuada del discurso, así como un lenguaje inclusivo y no sexista.",
+            "TEC.4.4.1.": "Diseñar, construir, controlar y simular sistemas automáticos programables y robots que sean capaces de realizar tareas de forma autónoma, aplicando conocimientos de mecánica, electrónica, neumática y componentes de los sistemas de control, así como otros conocimientos interdisciplinares.",
+            "TEC.4.4.2.": "Integrar en las máquinas y sistemas tecnológicos aplicaciones informáticas y tecnologías digitales emergentes de control y simulación como el internet de las cosas, el big data y la IA con sentido crítico y ético.",
+            "TEC.4.5.1.": "Resolver tareas propuestas de manera eficiente mediante el uso y configuración de diferentes aplicaciones y herramientas digitales, aplicando conocimientos interdisciplinares con autonomía.",
+            "TEC.4.6.1.": "Hacer un uso responsable de la tecnología, mediante el análisis y aplicación de criterios de sostenibilidad y accesibilidad en la selección de materiales y en el diseño de estos, así como en los procesos de fabricación de productos tecnológicos, minimizando el impacto negativo en la sociedad y en el planeta.",
+            "TEC.4.6.2.": "Analizar los beneficios que, en el cuidado del entorno, aportan la arquitectura bioclimática y el ecotransporte, valorando la contribución de las tecnologías al desarrollo sostenible.",
+            "TEC.4.6.3.": "Identificar y valorar la repercusión y los beneficios del desarrollo de proyectos tecnológicos de carácter social, por medio de comunidades abiertas, acciones de voluntariado o proyectos de servicio a la comunidad."
+        };
+
+        // Datos de campos adicionales
+        const additionalFieldsData = {
+            "METODOLOGÍA A UTILIZAR": [
+				"Nada que adaptar",
+				"Motivar hacia la materia",
+				"Adecuar la cantidad y el grado de dificultad de la tarea para casa",
+				"Adecuar los libros a su nivel lector o, en todo caso, facilitarle la lectura",
+				"Alternar actividades que requieran mayor esfuerzo de concentración con aquellas que estén más centradas en sus intereses",
+				"Anticipar resúmenes o esquemas del contenido que se va a tratar en clase",
+				"Anticipar los cambios en las actividades y tareas para centrar su atención",
+				"Asegurar su atención",
+				"Asegurar el éxito en sus ejecuciones, en principio con actividades sencillas para después aumentar paulatinamente el nivel de exigencia (el éxito, lleva al éxito)",
+				"Asegurarse de que el alumno anota los deberes y las fechas de evaluación",
+				"Asegurarse de que entiende las tareas, comprobar que ha comprendido lo que tiene que hacer",
+				"Ayudarle a organizarse",
+				"Cambiar de actividades o tareas más a menudo que los demás",
+				"Combinar las actividades y tareas más motivadoras con las que lo son menos para el alumno",
+				"Darle oportunidades específicas para que haga aportaciones a la clase",
+				"Darle tiempo para procesar la información, organizar sus pensamientos y su trabajo",
+				"Desglosar las actividades en pequeñas fases o pasos (análisis de tareas)",
+				"Estudiar con el alumno el vocabulario nuevo que va a encontrar en los textos, actividades o tareas que va a realizar",
+				"Evitar la exposición ante el resto de compañeros y compañeras de sus carencias con el fin de no deteriorar su autoestima",
+				"Hacerle saber que puede preguntar todo aquello que no comprenda",
+				"Incorporar un calendario con las fechas de exámenes y de entrega de proyectos o trabajos de forma coordinada",
+				"Motivar hacia la materia",
+				"Ofrecer las instrucciones sobre la tarea de una en una",
+				"Ofrecer una programa de actividades muy estructurado",
+				"Permitir al alumno usar el ordenador para realizar las actividades",
+				"Permitir más tiempo para realizar los trabajos, tareas, pruebas o exámenes",
+				"Propiciar que tenga la ocasión de mostrar al grupo sus habilidades",
+				"Realizar otras actividades que impliquen capacidades donde el escolar destaque con la finalidad de mejorar su autoestima y motivación",
+				"Realizar proyectos, salidas culturales, proyección de películas, excursiones",
+				"Reducir la cantidad de tarea en el aula",
+				"Repetirle las cosas y las explicaciones cuantas veces sea necesario",
+				"Seleccionar tareas variadas y con diferentes grados de dificultad para trabajar los mismos contenidos",
+				"Ser positivos: explicar lo que se desea que haga el alumno y no lo que no se desea",
+				"Simplificar las instrucciones y pedir al alumno que las repita",
+				"Usar refuerzos y apoyos visuales al texto escrito",
+				"Uso del Aprendizaje por Proyectos",
+				"Uso de estrategias de Trabajo Cooperativo/Colaborativo",
+				"Utilizar discursos diferenciados",
+				"Utilizar guiones de trabajo para el abordaje de las actividades o tareas",
+				"Utilizar imágenes, esquemas y gráficos que faciliten la comprensión del conjunto y la ubicación de los detalles",		
+            ],
+            
+			"TIPO DE ACTIVIDADES Y TAREAS": [
+				"Las mismas actividades que sus compañeros/as",
+				"Audio",
+				"Búsqueda y selección de información en diferentes medios (internet, prensa, libros, etc..)",
+				"Confeccionar e interpretar tablas, gráficas, informes, etc.",
+				"Elaboración de informes",
+				"Exposiciones",
+				"Infografía",
+				"Maqueta",
+				"Mural",
+				"Presentaciones",
+				"Simulaciones",
+				"Toma de apuntes",
+				"Vídeo",
+				"Tareas (precisar)",
+            ],
+            "FORMAS DE ACCESO A LA INFORMACIÓN": [
+				"Nada que resaltar en este aspecto",
+				"Aplicaciones informáticas específicas",
+				"Elaborar audios",
+				"Elaborar vídeos",
+				"Proporcionar acceso a webs",
+				"Proporcionar material adicional",
+            ],
+            "RECURSOS DIDÁCTICOS": [
+				"Agenda del alumno",
+				"Aplicaciones informáticas interactivas que faciliten la comprensión y expresión de los conceptos",
+				"Banco de recursos del departamento con diferentes niveles de competencia curricular",
+				"Calculadora",
+				"Classroom",
+				"Cuadernillos alternativos al libro de texto",
+				"Gráficos ilustrativos que ayuden a captar y organizar las ideas",
+				"Libro de texto ordinario",
+				"Libros de consulta",
+				"Maquetas realizadas previamente",
+				"Móvil",
+				"Páginas web informativas sobre los contenidos a trabajar en el aula",
+				"Pizarra digital",
+				"Recursos audiovisuales (vídeos, audios, fotografías, dibujos, etc.)",
+				"Software de aprendizaje, secuencias audiovisuales, enciclopedias en línea",
+				"Temporizador/reloj",
+            ],
+            "AGRUPAMIENTOS, DISTRIBUCIÓN DE ESPACIOS Y TIEMPOS": [
+				"Ajustar la distribución del espacio a las necesidades de aprendizaje",
+				"Alternar las actividades académicas con tiempos de descanso (adaptarse a la 'curva de fatiga' del alumno)",
+				"Evitar los 'tiempos muertos' en los que el alumno se sienta incómodo o vulnerable",
+				"Grupos cooperativos/colaborativos",
+				"Priorizar el trabajo de grupo",
+				"Priorizar el trabajo individual para centrar su atención y facilitar el seguimiento personalizado",
+				"Sentar al alumno cerca del profesor/a y lejos de motivos de distracción",
+				"Tutoría entre Iguales",
+
+            ],
+            "INSTRUMENTOS DE EVALUACIÓN": [
+				"Los habituales para sus compañeros",
+				"Antes de comenzar, leer el texto en voz alta una vez (ya sea de manera grupal o individual)",
+				"Cuidar el formato de los exámenes (claro, limpio)",
+				"Dar a conocer las fechas de las pruebas de evaluación con más de una semana de antelación",
+				"Disponer de un ejemplo que le facilite la comprensión de lo que tiene que hacer exactamente",
+				"En las pruebas escritas, asegurarnos de que ha comprendido el enunciado de todas las preguntas",
+				"Evaluar sus progresos en comparación con él mismo",
+				"Evitar hacerle copiar los enunciados de las preguntas o problemas en los exámenes",
+				"Evitar que el alumno tenga más de una prueba evaluable al día e intentar que estén espaciadas en el tiempo",
+				"Fragmentar el texto en pequeñas partes",
+				"Permitir que el alumno pueda tener acceso al libro de texto o al material trabajado",
+				"Permitir que el alumno pueda tener acceso al material gráfico",
+				"Presentar las preguntas del examen por escrito (no dictar)",
+				"Proporcionar mayor tiempo para entregas",
+				"Reducir el número de preguntas a contestar si son reiterativas",
+				"Reducir el número de trabajos",
+				"Tiempo adicional en las pruebas de evaluación escritas",
+            ]
+        };
+
+        // Estado de la aplicación
+        let selectedSubjects = [], selectedPendingCriteria = [], derivedTec4Criteria = [];
+        let currentGistId = null, praMateriaPendiente = false, praRepeticion = false;
+        let selectedAdditionalFields = {};
+        let cursaTEC4 = true; // Por defecto, el alumno cursa TEC4
+        let tareasText = ''; // Variable para almacenar el texto de tareas
+
+        // --- FUNCIONES PRINCIPALES ---
+        function init() {
+            lucide.createIcons();
+            updateTutor();
+            document.getElementById('pra-materia-pendiente').addEventListener('change', function() { 
+                praMateriaPendiente = this.checked; 
+            });
+            document.getElementById('pra-repeticion').addEventListener('change', function() { 
+                praRepeticion = this.checked;
+                // Validación: PRA por repetición solo para alumnos que cursan TEC4
+                if (this.checked && !cursaTEC4) {
+                    alert("PRA por repetición solo está disponible para alumnos que cursan TEC4.");
+                    this.checked = false;
+                    praRepeticion = false;
+                }
+            });
+            document.getElementById('cursa-tec4').addEventListener('change', function() { 
+                cursaTEC4 = this.checked;
+                // Si se desmarca cursa TEC4, desmarcar PRA por repetición si estaba marcado
+                if (!cursaTEC4 && praRepeticion) {
+                    document.getElementById('pra-repeticion').checked = false;
+                    praRepeticion = false;
+                }
+            });
+            loadAdditionalFields();
+        }
+
+        function resetData() {
+            if (!confirm("¿Estás seguro de que quieres reiniciar todos los datos?")) return;
+            
+            // Limpiar formulario
+            ['nombre', 'apellido1', 'apellido2', 'grupo', 'github-token-load', 'github-token', 'propuesta-actividades'].forEach(id => {
+                document.getElementById(id).value = '';
+            });
+            document.getElementById('pra-materia-pendiente').checked = false;
+            document.getElementById('pra-repeticion').checked = false;
+            document.getElementById('cursa-tec4').checked = true;
+            
+            // Limpiar selecciones
+            selectedSubjects.forEach(subject => {
+                const checkbox = document.getElementById(`subject-${subject}`);
+                if (checkbox) checkbox.checked = false;
+                const subjectCard = document.querySelector(`[data-subject="${subject}"]`);
+                if (subjectCard) subjectCard.classList.remove('active');
+            });
+            
+            // Reiniciar estado
+            selectedSubjects = []; selectedPendingCriteria = []; derivedTec4Criteria = [];
+            currentGistId = null; praMateriaPendiente = false; praRepeticion = false;
+            selectedAdditionalFields = {}; cursaTEC4 = true;
+            tareasText = '';
+            
+            // Actualizar UI
+            document.getElementById('selected-subjects-count').textContent = '0';
+            document.getElementById('criteria-container').classList.add('hidden');
+            document.getElementById('criteria-lists').innerHTML = '';
+            document.getElementById('tutor-display').textContent = '---';
+            document.getElementById('result-list').innerHTML = '';
+            document.getElementById('gist-status').textContent = '';
+            document.getElementById('load-status').textContent = '';
+            document.getElementById('gist-list').classList.add('hidden');
+            
+            // Limpiar campos adicionales
+            const container = document.getElementById('additional-fields-container');
+            container.innerHTML = '';
+            loadAdditionalFields();
+            
+            goToStep(1);
+            setTimeout(() => alert("Todos los datos han sido reiniciados correctamente."), 100);
+        }
+
+        function updateTutor() {
+            const grupo = document.getElementById('grupo').value;
+            const tutorDisplay = document.getElementById('tutor-display');
+            tutorDisplay.textContent = grupo && tutores[grupo] ? tutores[grupo] : "---";
+        }
+
+        function goToStep(step) {
+            // Validaciones
+            if (step === 2) {
+                if (!document.getElementById('nombre').value || !document.getElementById('apellido1').value || !document.getElementById('grupo').value) {
+                    alert("Por favor, completa los datos del alumno antes de continuar.");
+                    return;
+                }
+                if (!praMateriaPendiente && !praRepeticion) {
+                    alert("Por favor, selecciona al menos un tipo de Programa de Refuerzo.");
+                    return;
+                }
+            }
+
+            // Actualizar UI
+            document.querySelectorAll('section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`screen-${step}`).classList.remove('hidden');
+
+            document.querySelectorAll('[id$="-ind"]').forEach(el => {
+                el.classList.remove('step-active');
+                el.classList.add('step-inactive');
+            });
+            document.getElementById(`step${step}-ind`).classList.remove('step-inactive');
+            document.getElementById(`step${step}-ind`).classList.add('step-active');
+        }
+
+        // Nueva función para navegar desde el paso 2
+        function nextFromStep2() {
+            if (cursaTEC4) {
+                // Si cursa TEC4, validar según el tipo de PRA
+                if (praMateriaPendiente && selectedSubjects.length === 0) {
+                    alert("Para PRA por materia pendiente, debe seleccionar al menos una materia.");
+                    return;
+                }
+                // Para PRA por repetición, no se requieren materias seleccionadas
+                goToStep(3);
+            } else {
+                // Si NO cursa TEC4, solo puede ser PRA por materia pendiente
+                if (selectedSubjects.length === 0) {
+                    alert("Para alumnos que no cursan TEC4, debe seleccionar al menos una materia pendiente.");
+                    return;
+                }
+                // Ir directamente al paso 4 (sin metodología)
+                calculatePlan();
+            }
+        }
+        
+        // Nueva función para retroceder desde el paso 4
+        function backFromStep4() {
+            if (cursaTEC4) {
+                // Si cursa TEC4, retroceder al paso 3 (Metodología)
+                goToStep(3);
+            } else {
+                // Si NO cursa TEC4, retroceder al paso 2 (Materias)
+                goToStep(2);
+            }
+        }
+
+        function toggleSubject(subjectId) {
+            const checkbox = document.getElementById(`subject-${subjectId}`);
+            const subjectCard = document.querySelector(`[data-subject="${subjectId}"]`);
+            
+            if (checkbox.checked) {
+                selectedSubjects.push(subjectId);
+                subjectCard.classList.add('active');
+                loadSubjectCriteria(subjectId);
+            } else {
+                selectedSubjects = selectedSubjects.filter(s => s !== subjectId);
+                subjectCard.classList.remove('active');
+                removeSubjectCriteria(subjectId);
+            }
+            
+            document.getElementById('selected-subjects-count').textContent = selectedSubjects.length;
+            const container = document.getElementById('criteria-container');
+            selectedSubjects.length > 0 ? container.classList.remove('hidden') : container.classList.add('hidden');
+            updateCalculateButton();
+            
+            // Reordenar las secciones de criterios
+            reorderCriteriaSections();
+            
+            // Actualizar iconos de Lucide
+            setTimeout(() => {
+                lucide.createIcons();
+            }, 100);
+        }
+
+        function loadSubjectCriteria(subjectId) {
+            const container = document.getElementById('criteria-lists');
+            const criteria = criteriaData[subjectId];
+            
+            if (criteria) {
+                const subjectNames = {
+                    "CYR1": "Computación y Robótica 1º", "CYR2": "Computación y Robótica 2º", "CYR3": "Computación y Robótica 3º",
+                    "TYD2": "Tecnología y Digitalización 2º", "TYD3": "Tecnología y Digitalización 3º"
+                };
+                
+                // Verificar si ya existe la sección
+                if (document.getElementById(`criteria-${subjectId}`)) {
+                    return;
+                }
+                
+                const subjectSection = document.createElement('div');
+                subjectSection.className = `p-4 rounded-lg border border-slate-200 criteria-section ${subjectId.toLowerCase()}`;
+                subjectSection.id = `criteria-${subjectId}`;
+                subjectSection.innerHTML = `
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="font-medium text-slate-700">${subjectNames[subjectId]}</h4>
+                        <div class="flex gap-2">
+                            <button onclick="selectAllCriteria('${subjectId}')" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded transition-colors flex items-center gap-1">
+                                <i data-lucide="check-square" class="w-3 h-3"></i> Seleccionar todos
+                            </button>
+                            <button onclick="deselectAllCriteria('${subjectId}')" class="text-xs bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded transition-colors flex items-center gap-1">
+                                <i data-lucide="square" class="w-3 h-3"></i> Deseleccionar todos
+                            </button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 gap-2">
+                        ${criteria.map(c => `
+                            <div class="criteria-checkbox relative">
+                                <input type="checkbox" value="${c.id}" data-subject="${subjectId}" onchange="updateSelection(this)">
+                                <div class="checkmark"></div>
+                                <div class="criteria-content p-3 rounded border border-slate-200 bg-white hover:bg-slate-50 transition-all flex items-start gap-3 pl-12">
+                                    <div class="flex-1">
+                                        <span class="font-bold text-sm block text-slate-800">${c.id}</span>
+                                        <span class="text-sm text-slate-600">${c.text}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(subjectSection);
+                
+                // Actualizar iconos de Lucide
+                setTimeout(() => {
+                    lucide.createIcons();
+                }, 100);
+            }
+        }
+
+        // Funciones para selección masiva de criterios
+        function selectAllCriteria(subjectId) {
+            const criteriaSection = document.getElementById(`criteria-${subjectId}`);
+            if (!criteriaSection) return;
+            
+            const checkboxes = criteriaSection.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                if (!checkbox.checked) {
+                    checkbox.checked = true;
+                    updateSelection(checkbox);
+                }
+            });
+        }
+
+        function deselectAllCriteria(subjectId) {
+            const criteriaSection = document.getElementById(`criteria-${subjectId}`);
+            if (!criteriaSection) return;
+            
+            const checkboxes = criteriaSection.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    checkbox.checked = false;
+                    updateSelection(checkbox);
+                }
+            });
+        }
+
+        function removeSubjectCriteria(subjectId) {
+            const criteriaSection = document.getElementById(`criteria-${subjectId}`);
+            if (criteriaSection) criteriaSection.remove();
+            selectedPendingCriteria = selectedPendingCriteria.filter(item => item.subject !== subjectId);
+            updateCalculateButton();
+        }
+
+        function reorderCriteriaSections() {
+            const container = document.getElementById('criteria-lists');
+            const sections = Array.from(container.children);
+            
+            // Orden de las materias
+            const subjectOrder = {
+                'CYR1': 1,
+                'CYR2': 2,
+                'CYR3': 3,
+                'TYD2': 4,
+                'TYD3': 5
+            };
+            
+            sections.sort((a, b) => {
+                const aSubject = a.id.replace('criteria-', '');
+                const bSubject = b.id.replace('criteria-', '');
+                return subjectOrder[aSubject] - subjectOrder[bSubject];
+            });
+            
+            // Limpiar y reinsertar en orden
+            sections.forEach(section => container.appendChild(section));
+        }
+
+        function getSuperiorSubject(subject) {
+            const subjectMap = { "CYR1": "CYR2", "CYR2": "CYR3", "TYD2": "TYD3" };
+            return subjectMap[subject];
+        }
+
+        function getInferiorSubject(subject) {
+            const subjectMap = { "CYR2": "CYR1", "CYR3": "CYR2", "TYD3": "TYD2" };
+            return subjectMap[subject];
+        }
+
+        function updateSelection(checkbox) {
+            const subject = checkbox.getAttribute('data-subject');
+            const criterionId = checkbox.value;
+            
+            if (checkbox.checked) {
+                // Advertencia para CYR1 -> CYR3
+                if (subject === 'CYR1' && selectedSubjects.includes('CYR3')) {
+                    if (!confirm(`⚠️ ATENCIÓN: Al marcar el criterio ${criterionId} de CYR1 como suspenso, también se marcarán automáticamente los criterios equivalentes en CYR2 y CYR3. ¿Continuar?`)) {
+                        checkbox.checked = false;
+                        return;
+                    }
+                }
+                
+                // Verificar equivalencias
+                if (equivalentCriteria[subject] && equivalentCriteria[subject][criterionId]) {
+                    const superiorCriterionId = equivalentCriteria[subject][criterionId];
+                    const superiorSubject = getSuperiorSubject(subject);
+                    
+                    if (selectedSubjects.includes(superiorSubject)) {
+                        const isSuperiorCriterionApproved = !selectedPendingCriteria.some(
+                            crit => crit.subject === superiorSubject && crit.criterionId === superiorCriterionId
+                        );
+                        
+                        if (isSuperiorCriterionApproved) {
+                            if (confirm(`⚠️ ATENCIÓN: El criterio ${superiorCriterionId} (${superiorSubject}) está APROBADO.\n\n¿Estás seguro de que quieres marcar ${criterionId} (${subject}) como SUSPENSO?\n\nSi continúas, el criterio superior también se marcará como suspenso.`)) {
+                                selectedPendingCriteria.push({ subject, criterionId });
+                                markSuperiorCriteria(subject, criterionId);
+                            } else {
+                                checkbox.checked = false;
+                                return;
+                            }
+                        } else {
+                            selectedPendingCriteria.push({ subject, criterionId });
+                        }
+                    } else {
+                        selectedPendingCriteria.push({ subject, criterionId });
+                    }
+                } else {
+                    selectedPendingCriteria.push({ subject, criterionId });
+                }
+                
+                // Marcar automáticamente criterios inferiores
+                markInferiorCriteria(subject, criterionId);
+            } else {
+                selectedPendingCriteria = selectedPendingCriteria.filter(
+                    item => !(item.subject === subject && item.criterionId === criterionId)
+                );
+                
+                // Desmarcar criterios superiores si es necesario
+                unmarkSuperiorCriteria(subject, criterionId);
+                
+                // Desmarcar criterios inferiores si es necesario
+                unmarkInferiorCriteria(subject, criterionId);
+            }
+            
+            updateCalculateButton();
+        }
+
+        function markSuperiorCriteria(inferiorSubject, inferiorCriterionId) {
+            // CYR1 -> CYR2
+            if (equivalentCriteria[inferiorSubject] && equivalentCriteria[inferiorSubject][inferiorCriterionId]) {
+                const superiorCriterionId = equivalentCriteria[inferiorSubject][inferiorCriterionId];
+                const superiorSubject = getSuperiorSubject(inferiorSubject);
+                
+                if (selectedSubjects.includes(superiorSubject)) {
+                    if (!selectedPendingCriteria.some(item => item.subject === superiorSubject && item.criterionId === superiorCriterionId)) {
+                        selectedPendingCriteria.push({ subject: superiorSubject, criterionId: superiorCriterionId });
+                        updateCheckbox(superiorSubject, superiorCriterionId, true);
+                        
+                        // Marcar recursivamente hacia arriba
+                        markSuperiorCriteria(superiorSubject, superiorCriterionId);
+                    }
+                }
+            }
+            
+            // CYR1 -> CYR3
+            if (inferiorSubject === 'CYR1' && equivalentCriteria['CYR1_to_CYR3'] && equivalentCriteria['CYR1_to_CYR3'][inferiorCriterionId]) {
+                const superiorCriterionId = equivalentCriteria['CYR1_to_CYR3'][inferiorCriterionId];
+                const superiorSubject = 'CYR3';
+                
+                if (selectedSubjects.includes(superiorSubject)) {
+                    if (!selectedPendingCriteria.some(item => item.subject === superiorSubject && item.criterionId === superiorCriterionId)) {
+                        selectedPendingCriteria.push({ subject: superiorSubject, criterionId: superiorCriterionId });
+                        updateCheckbox(superiorSubject, superiorCriterionId, true);
+                    }
+                }
+            }
+        }
+
+        function markInferiorCriteria(superiorSubject, superiorCriterionId) {
+            // Verificar si existe mapeo inverso para esta materia y criterio
+            if (equivalentCriteriaInverse[superiorSubject] && equivalentCriteriaInverse[superiorSubject][superiorCriterionId]) {
+                const inferiorCriterionId = equivalentCriteriaInverse[superiorSubject][superiorCriterionId];
+                const inferiorSubject = getInferiorSubject(superiorSubject);
+                
+                if (selectedSubjects.includes(inferiorSubject)) {
+                    if (!selectedPendingCriteria.some(item => item.subject === inferiorSubject && item.criterionId === inferiorCriterionId)) {
+                        selectedPendingCriteria.push({ subject: inferiorSubject, criterionId: inferiorCriterionId });
+                        updateCheckbox(inferiorSubject, inferiorCriterionId, true);
+                        
+                        // Marcar recursivamente hacia abajo
+                        markInferiorCriteria(inferiorSubject, inferiorCriterionId);
+                    }
+                }
+            }
+        }
+
+        function unmarkSuperiorCriteria(inferiorSubject, inferiorCriterionId) {
+            // CYR1 -> CYR2
+            if (equivalentCriteria[inferiorSubject] && equivalentCriteria[inferiorSubject][inferiorCriterionId]) {
+                const superiorCriterionId = equivalentCriteria[inferiorSubject][inferiorCriterionId];
+                const superiorSubject = getSuperiorSubject(inferiorSubject);
+                
+                if (selectedSubjects.includes(superiorSubject)) {
+                    if (selectedPendingCriteria.some(item => item.subject === superiorSubject && item.criterionId === superiorCriterionId)) {
+                        selectedPendingCriteria = selectedPendingCriteria.filter(
+                            item => !(item.subject === superiorSubject && item.criterionId === superiorCriterionId)
+                        );
+                        updateCheckbox(superiorSubject, superiorCriterionId, false);
+                        
+                        // Desmarcar recursivamente hacia arriba
+                        unmarkSuperiorCriteria(superiorSubject, superiorCriterionId);
+                    }
+                }
+            }
+            
+            // CYR1 -> CYR3
+            if (inferiorSubject === 'CYR1' && equivalentCriteria['CYR1_to_CYR3'] && equivalentCriteria['CYR1_to_CYR3'][inferiorCriterionId]) {
+                const superiorCriterionId = equivalentCriteria['CYR1_to_CYR3'][inferiorCriterionId];
+                const superiorSubject = 'CYR3';
+                
+                if (selectedSubjects.includes(superiorSubject)) {
+                    if (selectedPendingCriteria.some(item => item.subject === superiorSubject && item.criterionId === superiorCriterionId)) {
+                        selectedPendingCriteria = selectedPendingCriteria.filter(
+                            item => !(item.subject === superiorSubject && item.criterionId === superiorCriterionId)
+                        );
+                        updateCheckbox(superiorSubject, superiorCriterionId, false);
+                    }
+                }
+            }
+        }
+
+        function unmarkInferiorCriteria(superiorSubject, superiorCriterionId) {
+            // Verificar si existe mapeo inverso para esta materia y criterio
+            if (equivalentCriteriaInverse[superiorSubject] && equivalentCriteriaInverse[superiorSubject][superiorCriterionId]) {
+                const inferiorCriterionId = equivalentCriteriaInverse[superiorSubject][superiorCriterionId];
+                const inferiorSubject = getInferiorSubject(superiorSubject);
+                
+                if (selectedSubjects.includes(inferiorSubject)) {
+                    if (selectedPendingCriteria.some(item => item.subject === inferiorSubject && item.criterionId === inferiorCriterionId)) {
+                        selectedPendingCriteria = selectedPendingCriteria.filter(
+                            item => !(item.subject === inferiorSubject && item.criterionId === inferiorCriterionId)
+                        );
+                        updateCheckbox(inferiorSubject, inferiorCriterionId, false);
+                        
+                        // Desmarcar recursivamente hacia abajo
+                        unmarkInferiorCriteria(inferiorSubject, inferiorCriterionId);
+                    }
+                }
+            }
+        }
+
+        function updateCheckbox(subject, criterionId, checked) {
+            const checkbox = document.querySelector(`input[value="${criterionId}"][data-subject="${subject}"]`);
+            if (checkbox) {
+                checkbox.checked = checked;
+                const criteriaContent = checkbox.closest('.criteria-checkbox').querySelector('.criteria-content');
+                if (criteriaContent) {
+                    criteriaContent.classList.toggle('bg-blue-50', checked);
+                    criteriaContent.classList.toggle('border-blue-500', checked);
+                    criteriaContent.classList.toggle('text-blue-700', checked);
+                }
+            }
+        }
+
+        function updateCalculateButton() {
+            const btn = document.getElementById('btn-calculate');
+            let hasSelectedCriteria = true;
+            
+            if (cursaTEC4 && praMateriaPendiente) {
+                // Para TEC4 con materia pendiente, requiere criterios
+                hasSelectedCriteria = selectedPendingCriteria.length > 0;
+            } else if (!cursaTEC4) {
+                // Para no TEC4 (siempre materia pendiente), requiere criterios
+                hasSelectedCriteria = selectedPendingCriteria.length > 0;
+            }
+            // Para TEC4 con repetición, no requiere criterios
+            
+            btn.disabled = !hasSelectedCriteria;
+            btn.classList.toggle('opacity-50', !hasSelectedCriteria);
+            btn.classList.toggle('cursor-not-allowed', !hasSelectedCriteria);
+        }
+
+        function loadAdditionalFields() {
+            const container = document.getElementById('additional-fields-container');
+            
+            // Definir clases CSS para cada sección
+            const sectionClasses = {
+                "METODOLOGÍA A UTILIZAR": "section-metodologia",
+                "TIPO DE ACTIVIDADES Y TAREAS": "section-actividades",
+                "FORMAS DE ACCESO A LA INFORMACIÓN": "section-acceso",
+                "RECURSOS DIDÁCTICOS": "section-recursos",
+                "AGRUPAMIENTOS, DISTRIBUCIÓN DE ESPACIOS Y TIEMPOS": "section-agrupamientos",
+                "PROCEDIMIENTOS E INSTRUMENTOS DE EVALUACIÓN": "section-evaluacion"
+            };
+            
+            // Definir iconos para cada sección
+            const sectionIcons = {
+                "METODOLOGÍA A UTILIZAR": "settings",
+                "TIPO DE ACTIVIDADES Y TAREAS": "clipboard-list",
+                "FORMAS DE ACCESO A LA INFORMACIÓN": "book-open",
+                "RECURSOS DIDÁCTICOS": "package",
+                "AGRUPAMIENTOS, DISTRIBUCIÓN DE ESPACIOS Y TIEMPOS": "users",
+                "PROCEDIMIENTOS E INSTRUMENTOS DE EVALUACIÓN": "file-check"
+            };
+            
+            for (const [section, items] of Object.entries(additionalFieldsData)) {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = `additional-field-section ${sectionClasses[section]}`;
+                
+                let itemsHTML = '';
+                
+                if (section === "TIPO DE ACTIVIDADES Y TAREAS") {
+                    // Para esta sección, tratamos "Tareas (precisar)" de forma especial
+                    itemsHTML = items.map(item => {
+                        if (item === "Tareas (precisar)") {
+                            return `
+                                <div class="additional-field-item">
+                                    <input type="checkbox" id="${section}-${item.replace(/\s+/g, '-')}" value="${item}" onchange="toggleTareasTextarea(this)">
+                                    <label for="${section}-${item.replace(/\s+/g, '-')}" class="text-sm text-slate-700 cursor-pointer flex-1">${item}</label>
+                                </div>
+                                <div id="tareas-textarea-container" class="tareas-textarea-container">
+                                    <textarea id="tareas-text" rows="3" class="w-full p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Describe las tareas específicas...">${tareasText}</textarea>
+                                </div>
+                            `;
+                        } else {
+                            return `
+                                <div class="additional-field-item">
+                                    <input type="checkbox" id="${section}-${item.replace(/\s+/g, '-')}" value="${item}" onchange="updateAdditionalField('${section}', this)">
+                                    <label for="${section}-${item.replace(/\s+/g, '-')}" class="text-sm text-slate-700 cursor-pointer flex-1">${item}</label>
+                                </div>
+                            `;
+                        }
+                    }).join('');
+                } else {
+                    // Para las demás secciones, renderizado normal
+                    itemsHTML = items.map(item => `
+                        <div class="additional-field-item">
+                            <input type="checkbox" id="${section}-${item.replace(/\s+/g, '-')}" value="${item}" onchange="updateAdditionalField('${section}', this)">
+                            <label for="${section}-${item.replace(/\s+/g, '-')}" class="text-sm text-slate-700 cursor-pointer flex-1">${item}</label>
+                        </div>
+                    `).join('');
+                }
+                
+                sectionDiv.innerHTML = `
+                    <h3 class="font-medium mb-3 flex items-center gap-2">
+                        <i data-lucide="${sectionIcons[section]}" class="w-5 h-5"></i>
+                        ${section}
+                    </h3>
+                    <div class="space-y-2">
+                        ${itemsHTML}
+                    </div>
+                `;
+                container.appendChild(sectionDiv);
+            }
+            
+            // Actualizar los iconos de Lucide
+            setTimeout(() => {
+                lucide.createIcons();
+            }, 100);
+        }
+
+        // Función para mostrar/ocultar el textarea de tareas
+        function toggleTareasTextarea(checkbox) {
+            const textareaContainer = document.getElementById('tareas-textarea-container');
+            const textarea = document.getElementById('tareas-text');
+            
+            if (checkbox.checked) {
+                textareaContainer.classList.add('show');
+                // Si ya hay texto guardado, cargarlo
+                textarea.value = tareasText;
+            } else {
+                textareaContainer.classList.remove('show');
+                // Limpiar el textarea
+                textarea.value = '';
+                tareasText = '';
+            }
+            
+            // Actualizar el campo adicional
+            updateAdditionalField('TIPO DE ACTIVIDADES Y TAREAS', checkbox);
+        }
+
+        // Función para actualizar el texto de tareas
+        function updateTareasText() {
+            const textarea = document.getElementById('tareas-text');
+            tareasText = textarea.value;
+        }
+
+        function updateAdditionalField(section, checkbox) {
+            if (!selectedAdditionalFields[section]) {
+                selectedAdditionalFields[section] = [];
+            }
+            
+            if (checkbox.checked) {
+                selectedAdditionalFields[section].push(checkbox.value);
+            } else {
+                selectedAdditionalFields[section] = selectedAdditionalFields[section].filter(item => item !== checkbox.value);
+            }
+        }
+
+        function sortCriteria(criteria) {
+            return criteria.sort((a, b) => {
+                const aParts = a.split('.').map(part => parseInt(part) || part);
+                const bParts = b.split('.').map(part => parseInt(part) || part);
+                
+                for (let i = 0; i < Math.min(aParts.length, bParts.length); i++) {
+                    if (aParts[i] !== bParts[i]) {
+                        return aParts[i] - bParts[i];
+                    }
+                }
+                return aParts.length - bParts.length;
+            });
+        }
+
+        function calculatePlan() {
+            // Actualizar el texto de tareas por si se ha modificado
+            updateTareasText();
+            
+            // Mostrar u ocultar secciones según si cursa TEC4
+            const tec4Section = document.getElementById('tec4-section');
+            const noTec4Section = document.getElementById('no-tec4-section');
+            
+            if (cursaTEC4) {
+                tec4Section.classList.remove('hidden');
+                noTec4Section.classList.add('hidden');
+                
+                if (praRepeticion && selectedSubjects.length === 0) {
+                    // PRA POR REPETICIÓN - Mostrar TODOS los criterios de TEC4
+                    derivedTec4Criteria = Object.keys(tec4Criteria);
+                    const resultList = document.getElementById('result-list');
+                    resultList.innerHTML = '';
+                    
+                    derivedTec4Criteria.forEach(id => {
+                        const text = tec4Criteria[id] || "Descripción no disponible.";
+                        const li = document.createElement('li');
+                        li.className = "p-2 bg-white border-b border-green-50 last:border-0";
+                        li.innerHTML = `<span class="font-bold text-green-700">${id}</span>: ${text}`;
+                        resultList.appendChild(li);
+                    });
+                } else {
+                    // CORRELACIÓN CORREGIDA ENTRE MATERIAS PENDIENTES Y TEC4
+                    const tecSet = new Set();
+
+                    selectedPendingCriteria.forEach(item => {
+                        const { subject, criterionId } = item;
+                        
+                        // Determinar qué mapeo usar según la materia
+                        const mapping = subject.startsWith('CYR') ? mapCYR_TEC4 : mapTYD_TEC4;
+                        
+                        // CORRECCIÓN: Usar parts[2] y parts[3] en lugar de parts[1] y parts[2]
+                        // Para criterios como "TYD.3.1.1." las partes son:
+                        // parts[0] = "TYD", parts[1] = "3", parts[2] = "1", parts[3] = "1"
+                        const parts = criterionId.split('.');
+                        if (parts.length >= 4) {
+                            const key = `${parts[2]}.${parts[3]}.`;
+                            const targets = mapping[key];
+                            if (targets && targets.length > 0) {
+                                targets.forEach(t => tecSet.add(t));
+                            }
+                        }
+                    });
+
+                    derivedTec4Criteria = Array.from(tecSet);
+                    // Ordenar los criterios de forma numérica
+                    derivedTec4Criteria = sortCriteria(derivedTec4Criteria);
+                    
+                    const resultList = document.getElementById('result-list');
+                    resultList.innerHTML = '';
+
+                    if (derivedTec4Criteria.length === 0) {
+                        resultList.innerHTML = '<li class="text-gray-500 italic">No hay correlación directa con criterios de 4º para la selección actual.</li>';
+                    } else {
+                        derivedTec4Criteria.forEach(id => {
+                            const text = tec4Criteria[id] || "Descripción no disponible.";
+                            const li = document.createElement('li');
+                            li.className = "p-2 bg-white border-b border-green-50 last:border-0";
+                            li.innerHTML = `<span class="font-bold text-green-700">${id}</span>: ${text}`;
+                            resultList.appendChild(li);
+                        });
+                    }
+                }
+            } else {
+                tec4Section.classList.add('hidden');
+                noTec4Section.classList.remove('hidden');
+                
+                // Mostrar materias pendientes y criterios
+                const noTec4Criteria = document.getElementById('no-tec4-criteria');
+                noTec4Criteria.innerHTML = '';
+                
+                const subjectNames = {
+                    "CYR1": "Computación y Robótica 1º", "CYR2": "Computación y Robótica 2º", "CYR3": "Computación y Robótica 3º",
+                    "TYD2": "Tecnología y Digitalización 2º", "TYD3": "Tecnología y Digitalización 3º"
+                };
+                
+                if (selectedSubjects.length === 0) {
+                    noTec4Criteria.innerHTML = '<p class="text-gray-500 italic">No hay materias pendientes seleccionadas.</p>';
+                } else {
+                    selectedSubjects.forEach(subject => {
+                        const subjectDiv = document.createElement('div');
+                        subjectDiv.className = "mb-4 p-3 bg-white rounded border border-blue-100";
+                        
+                        const subjectName = document.createElement('h4');
+                        subjectName.className = "font-bold text-blue-700 mb-2";
+                        subjectName.textContent = subjectNames[subject] || subject;
+                        subjectDiv.appendChild(subjectName);
+                        
+                        const criteriaList = document.createElement('ul');
+                        criteriaList.className = "list-disc list-inside ml-4 space-y-1";
+                        
+                        const subjectCriteria = selectedPendingCriteria
+                            .filter(item => item.subject === subject)
+                            .map(item => item.criterionId);
+                        
+                        if (subjectCriteria.length === 0) {
+                            const noCriteria = document.createElement('li');
+                            noCriteria.className = "text-gray-500 italic";
+                            noCriteria.textContent = "No hay criterios seleccionados para esta materia.";
+                            criteriaList.appendChild(noCriteria);
+                        } else {
+                            // Ordenar criterios numéricamente
+                            const sortedCriteria = sortCriteria(subjectCriteria);
+                            
+                            sortedCriteria.forEach(criterionId => {
+                                const criterionText = criteriaData[subject].find(c => c.id === criterionId)?.text || criterionId;
+                                const li = document.createElement('li');
+                                li.innerHTML = `<span class="font-mono text-blue-600">${criterionId}</span>: ${criterionText}`;
+                                criteriaList.appendChild(li);
+                            });
+                        }
+                        subjectDiv.appendChild(criteriaList);
+                        noTec4Criteria.appendChild(subjectDiv);
+                    });
+                }
+            }
+
+            goToStep(4);
+        }
+
+        function generatePDF() {
+            // Actualizar el texto de tareas por si se ha modificado
+            updateTareasText();
+            
+            const gistStatus = document.getElementById('gist-status').textContent;
+            if (!gistStatus.includes('✅') && !confirm("No se ha guardado el expediente en GitHub. ¿Deseas continuar sin guardar?")) return;
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const nombre = document.getElementById('nombre').value;
+            const ap1 = document.getElementById('apellido1').value;
+            const ap2 = document.getElementById('apellido2').value;
+            const grupo = document.getElementById('grupo').value;
+            const tutor = document.getElementById('tutor-display').textContent;
+
+            // Determinar nombre del archivo
+            let fileName = `PRA_${nombre}_${ap1}_${ap2}`;
+            if (cursaTEC4 && praRepeticion && selectedSubjects.length === 0) {
+                fileName += '_REP';
+            } else {
+                fileName += `_${selectedSubjects.join('_')}`;
+            }
+            fileName += '.pdf';
+
+            // Header
+            doc.setFillColor(37, 99, 235);
+            doc.rect(0, 0, 210, 20, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.text("PROGRAMA DE REFUERZO DEL APRENDIZAJE", 105, 13, { align: "center" });
+
+            // Contenido
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "normal");
+            
+            let y = 35;
+            const pageHeight = 280; // Altura máxima antes de añadir nueva página
+            const margin = 14;
+            const maxWidth = 180;
+            const lineHeight = 7;
+
+            // Función para verificar y añadir nueva página si es necesario
+            function checkPageBreak(heightNeeded) {
+                if (y + heightNeeded > pageHeight) {
+                    doc.addPage();
+                    y = 20;
+                    return true;
+                }
+                return false;
+            }
+
+            // Función para añadir texto con manejo de saltos de página
+            function addText(text, isBold = false, customY = null, customMaxWidth = maxWidth) {
+                const currentY = customY !== null ? customY : y;
+                if (isBold) doc.setFont("helvetica", "bold");
+                else doc.setFont("helvetica", "normal");
+                
+                const lines = doc.splitTextToSize(text, customMaxWidth);
+                const textHeight = lines.length * lineHeight;
+                
+                // Verificar si necesitamos nueva página
+                if (currentY + textHeight > pageHeight) {
+                    doc.addPage();
+                    y = 20;
+                    // Volver a dividir el texto para la nueva página
+                    addText(text, isBold, y, customMaxWidth);
+                    return y + textHeight + 5;
+                }
+                
+                doc.text(lines, margin, currentY);
+                return currentY + textHeight + 5;
+            }
+
+            // Función para añadir sección con título
+            function addSection(title, content) {
+                checkPageBreak(15); // Espacio para título + línea + margen
+                
+                doc.setFont("helvetica", "bold");
+                doc.text(title, margin, y);
+                doc.setDrawColor(200, 200, 200);
+                doc.line(margin, y+1, 196, y+1);
+                y += 10;
+                
+                y = addText(content, false, y);
+                return y;
+            }
+
+            // DATOS DEL ALUMNO
+            y = addSection("DATOS DEL ALUMNO/A", `Nombre: ${nombre} ${ap1} ${ap2}\nCurso: ${grupo}\nTutora: ${tutor}`);
+            
+            // TIPO DE PROGRAMA
+            let tipoPRA = [];
+            if (praMateriaPendiente) tipoPRA.push("Materia Pendiente");
+            if (praRepeticion) tipoPRA.push("Repetición");
+            y = addSection("TIPO DE PROGRAMA", `Tipo: ${tipoPRA.join(" + ")}`);
+
+            // MATERIAS PENDIENTES
+            const subjectNames = {
+                "CYR1": "Computación y Robótica 1º", "CYR2": "Computación y Robótica 2º", "CYR3": "Computación y Robótica 3º",
+                "TYD2": "Tecnología y Digitalización 2º", "TYD3": "Tecnología y Digitalización 3º"
+            };
+            const selectedSubjectNames = selectedSubjects.map(s => subjectNames[s]).join(", ");
+            y = addSection("MATERIAS PENDIENTES", `Materias: ${selectedSubjectNames}`);
+
+            // CRITERIOS POR MATERIA
+            let criteriaText = "";
+            selectedSubjects.forEach((subject, index) => {
+                const subjectCriteria = selectedPendingCriteria
+                    .filter(item => item.subject === subject)
+                    .map(item => item.criterionId);
+                    
+                if (subjectCriteria.length > 0) {
+                    const sortedCriteria = sortCriteria(subjectCriteria);
+                    criteriaText += `${subjectNames[subject]}: ${sortedCriteria.join(", ")}`;
+                    
+                    if (index < selectedSubjects.length - 1) {
+                        criteriaText += "\n\n";
+                    }
+                }
+            });
+            
+            if (criteriaText) {
+                y = addSection("CRITERIOS A SUPERAR", criteriaText);
+            }
+
+            // PLAN DE REFUERZO - diferente según si cursa TEC4 o no
+            if (cursaTEC4) {
+                // Encabezado de propuesta de refuerzo
+                checkPageBreak(20);
+                doc.setFillColor(220, 252, 231);
+                doc.rect(margin, y-5, 182, 10, 'F');
+                doc.setTextColor(21, 128, 61);
+                doc.setFont("helvetica", "bold");
+                doc.text("PROPUESTA DE REFUERZO (CRITERIOS TEC 4º)", 105, y+1, { align: "center" });
+                y += 15;
+                doc.setTextColor(0, 0, 0);
+                doc.setFont("helvetica", "normal");
+
+                // Texto explicativo
+                let textoExplicativo = "";
+                if (praRepeticion && selectedSubjects.length === 0) {
+                    textoExplicativo = "El alumno/a cursa TEC4 y repite curso. Se trabajarán todos los criterios de la materia de Tecnología 4º.\n\nEn el marco de esto, al alumno/a se le podrán proponer a lo largo del curso actividades adicionales que desarrollen con más plenitud los criterios, a saber:";
+                } else {
+                    textoExplicativo = "Éstos son los criterios que el alumno/a tendrá que reforzar en la materia de Tecnología 4º en base a las materias propias del departamento que tiene no superadas.\n\nEn el marco de esto, al alumno/a se le podrán proponer a lo largo del curso y dentro de dicha materia, actividades adicionales que desarrollen con más plenitud los criterios no superados, a saber:";
+                }
+                y = addText(textoExplicativo);
+
+                // Criterios TEC4
+                if (derivedTec4Criteria.length === 0) {
+                    y = addText("No se han detectado criterios específicos correlacionados.");
+                } else {
+                    derivedTec4Criteria.forEach(id => {
+                        checkPageBreak(25); // Espacio para criterio + descripción
+                        
+                        const desc = tec4Criteria[id];
+                        doc.setFont("helvetica", "bold");
+                        doc.text(id, margin, y);
+                        doc.setFont("helvetica", "normal");
+                        
+                        const descLines = doc.splitTextToSize(desc, 160);
+                        const descHeight = descLines.length * lineHeight;
+                        
+                        if (y + descHeight > pageHeight) {
+                            doc.addPage();
+                            y = 20;
+                        }
+                        
+                        doc.text(descLines, 35, y);
+                        y += descHeight + 4;
+                    });
+                }
+                
+                // CAMPOS ADICIONALES - solo para TEC4
+                if (Object.keys(selectedAdditionalFields).length > 0) {
+                    checkPageBreak(20);
+                    y += 10;
+                    doc.setFillColor(240, 249, 255);
+                    doc.rect(margin, y-5, 182, 10, 'F');
+                    doc.setTextColor(37, 99, 235);
+                    doc.setFont("helvetica", "bold");
+                    doc.text("METODOLOGÍA Y RECURSOS", 105, y+1, { align: "center" });
+                    y += 15;
+                    doc.setTextColor(0, 0, 0);
+
+                    for (const [section, items] of Object.entries(selectedAdditionalFields)) {
+                        checkPageBreak(15);
+                        
+                        doc.setFont("helvetica", "bold");
+                        doc.text(section, margin, y);
+                        y += 7;
+                        
+                        if (items.length === 0) {
+                            doc.setFont("helvetica", "italic");
+                            y = addText("No se han seleccionado elementos específicos.", false, y);
+                        } else {
+                            doc.setFont("helvetica", "normal");
+                            items.forEach(item => {
+                                checkPageBreak(10);
+                                // Si es "Tareas (precisar)", mostrar "Tareas" y el texto con sangría
+                                if (item === "Tareas (precisar)" && tareasText) {
+                                    doc.setFont("helvetica", "bold");
+                                    doc.text("Tareas", margin, y);
+                                    y += 7;
+                                    
+                                    const lines = doc.splitTextToSize(tareasText, 160);
+                                    lines.forEach(line => {
+                                        checkPageBreak(10);
+                                        doc.text("   " + line, margin, y); // Sangría de 3 espacios
+                                        y += lineHeight;
+                                    });
+                                    y += 5;
+                                } else if (item !== "Tareas (precisar)") {
+                                    // Para otros elementos, mostrar normalmente
+                                    y = addText(`• ${item}`, false, y);
+                                }
+                            });
+                        }
+                        y += 5;
+                    }
+                }
+            } else {
+                // PROPUESTA DE ACTIVIDADES para alumnos que NO cursan TEC4
+                checkPageBreak(20);
+                doc.setFillColor(220, 235, 252);
+                doc.rect(margin, y-5, 182, 10, 'F');
+                doc.setTextColor(21, 78, 128);
+                doc.setFont("helvetica", "bold");
+                doc.text("PROPUESTA DE ACTIVIDADES", 105, y+1, { align: "center" });
+                y += 15;
+                doc.setTextColor(0, 0, 0);
+                doc.setFont("helvetica", "normal");
+                
+                // Texto explicativo
+                const textoExplicativo = "El/la alumno/a deberá realizar esta propuesta de actividades, que intenta trabajar los criterios de evaluación no superados en las materias propias del Departamento.\n\nLa entrega de las mismas se realizará en el Classroom que dispondrá el Departamento, al que el alumnado será invitado por el responsable del programa.\n\nFinalmente, se proporcionará una evaluación pormenorizada de cada criterio al alumnado.";
+                y = addText(textoExplicativo);
+                
+                // Propuesta de actividades específica
+                const propuestaActividades = document.getElementById('propuesta-actividades').value;
+                if (propuestaActividades) {
+                    y = addText(propuestaActividades);
+                } else {
+                    y = addText("No se ha proporcionado una propuesta de actividades.");
+                }
+            }
+
+            // Footer en cada página
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                doc.text("Generado automáticamente por la herramienta PRA - Dpto. Tecnología", 105, 290, { align: "center" });
+                doc.text(`Página ${i} de ${pageCount}`, 105, 285, { align: "center" });
+            }
+
+            doc.save(fileName);
+        }
+
+        async function saveToGist() {
+            // Actualizar el texto de tareas por si se ha modificado
+            updateTareasText();
+            
+            const token = document.getElementById('github-token').value;
+            const status = document.getElementById('gist-status');
+            
+            if (!token) {
+                status.textContent = "❌ Por favor, introduce un token de GitHub.";
+                status.className = "text-xs mt-2 text-red-600 font-bold";
+                return;
+            }
+
+            const nombre = document.getElementById('nombre').value;
+            const ap1 = document.getElementById('apellido1').value;
+            const ap2 = document.getElementById('apellido2').value;
+            const fullName = `${nombre} ${ap1} ${ap2}`.trim();
+            
+            // Agrupar criterios por materia
+            const criteriaBySubject = {};
+            selectedPendingCriteria.forEach(item => {
+                if (!criteriaBySubject[item.subject]) criteriaBySubject[item.subject] = [];
+                criteriaBySubject[item.subject].push(item.criterionId);
+            });
+            
+            const content = {
+                alumno: fullName,
+                curso: document.getElementById('grupo').value,
+                tipo_pra: { materia_pendiente: praMateriaPendiente, repeticion: praRepeticion },
+                cursaTEC4: cursaTEC4,
+                materias_pendientes: selectedSubjects,
+                criterios_pendientes: criteriaBySubject,
+                plan_tec4: derivedTec4Criteria,
+                metodologia: cursaTEC4 ? selectedAdditionalFields : null, // Solo guardar metodología si cursa TEC4
+                // Guardar propuesta de actividades si no cursa TEC4
+                propuesta_actividades: cursaTEC4 ? null : document.getElementById('propuesta-actividades').value,
+                tareasText: tareasText, // Guardar el texto de tareas
+                fecha: new Date().toISOString()
+            };
+
+            const filename = `PRA_${fullName.replace(/\s+/g, '_')}`;
+            if (cursaTEC4 && praRepeticion && selectedSubjects.length === 0) {
+                filename += '_REP';
+            } else {
+                filename += `_${selectedSubjects.join('_')}`;
+            }
+            filename += '.json';
+
+            status.textContent = "⏳ Guardando...";
+            status.className = "text-xs mt-2 text-blue-600";
+
+            try {
+                let response;
+                const body = {
+                    description: `PRA para ${fullName} - ${selectedSubjects.join(', ')}`,
+                    files: { [filename]: { content: JSON.stringify(content, null, 2) } }
+                };
+
+                if (currentGistId) {
+                    response = await fetch(`https://api.github.com/gists/${currentGistId}`, {
+                        method: 'PATCH', 
+                        headers: { 
+                            'Authorization': `token ${token}`, 
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/vnd.github.v3+json'
+                        },
+                        body: JSON.stringify(body)
+                    });
+                } else {
+                    body.public = false;
+                    response = await fetch('https://api.github.com/gists', {
+                        method: 'POST', 
+                        headers: { 
+                            'Authorization': `token ${token}`, 
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/vnd.github.v3+json'
+                        },
+                        body: JSON.stringify(body)
+                    });
+                }
+
+                if (response.ok) {
+                    const gistData = await response.json();
+                    currentGistId = gistData.id;
+                    status.textContent = "✅ Guardado correctamente en GitHub Gist.";
+                    status.className = "text-xs mt-2 text-green-600 font-bold";
+                    
+                    // Actualizar el token de carga con el mismo token
+                    document.getElementById('github-token-load').value = token;
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || "Error en la API");
+                }
+            } catch (error) {
+                console.error(error);
+                status.textContent = "❌ Error al guardar. Verifica tu token.";
+                status.className = "text-xs mt-2 text-red-600 font-bold";
+            }
+        }
+
+        // --- FUNCIONES PARA GESTIÓN DE GISTS ---
+        async function deleteGist(gistId, description) {
+            const token = document.getElementById('github-token-load').value;
+            if (!token) {
+                alert("Por favor, introduce tu token de GitHub para eliminar el expediente.");
+                return;
+            }
+
+            if (!confirm(`¿Estás seguro de que quieres eliminar el expediente "${description}"? Esta acción no se puede deshacer.`)) {
+                return;
+            }
+
+            const status = document.getElementById('load-status');
+            status.textContent = "⏳ Eliminando expediente...";
+            status.className = "text-xs mt-2 text-blue-600";
+
+            try {
+                const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                if (response.ok) {
+                    status.textContent = "✅ Expediente eliminado correctamente.";
+                    status.className = "text-xs mt-2 text-green-600 font-bold";
+                    
+                    // Recargar la lista de gists
+                    setTimeout(() => {
+                        loadExistingGists();
+                    }, 1000);
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || "Error al eliminar el Gist");
+                }
+            } catch (error) {
+                console.error(error);
+                status.textContent = "❌ Error al eliminar el expediente.";
+                status.className = "text-xs mt-2 text-red-600 font-bold";
+            }
+        }
+
+        async function renameGist(gistId, currentDescription) {
+            const token = document.getElementById('github-token-load').value;
+            if (!token) {
+                alert("Por favor, introduce tu token de GitHub para renombrar el expediente.");
+                return;
+            }
+
+            const newDescription = prompt("Nuevo nombre para el expediente:", currentDescription);
+            if (!newDescription || newDescription === currentDescription) {
+                return;
+            }
+
+            const status = document.getElementById('load-status');
+            status.textContent = "⏳ Renombrando expediente...";
+            status.className = "text-xs mt-2 text-blue-600";
+
+            try {
+                const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify({
+                        description: newDescription
+                    })
+                });
+
+                if (response.ok) {
+                    status.textContent = "✅ Expediente renombrado correctamente.";
+                    status.className = "text-xs mt-2 text-green-600 font-bold";
+                    
+                    // Recargar la lista de gists
+                    setTimeout(() => {
+                        loadExistingGists();
+                    }, 1000);
+                } else {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || "Error al renombrar el Gist");
+                }
+            } catch (error) {
+                console.error(error);
+                status.textContent = "❌ Error al renombrar el expediente.";
+                status.className = "text-xs mt-2 text-red-600 font-bold";
+            }
+        }
+
+        // --- FUNCIONES PARA CARGAR EXPEDIENTES EXISTENTES ---
+        async function loadExistingGists() {
+            const token = document.getElementById('github-token-load').value;
+            const status = document.getElementById('load-status');
+            const gistList = document.getElementById('gist-list');
+            const gistOptions = document.getElementById('gist-options');
+            
+            if (!token) {
+                status.textContent = "❌ Por favor, introduce un token de GitHub.";
+                status.className = "text-xs mt-2 text-red-600 font-bold";
+                return;
+            }
+
+            status.textContent = "⏳ Buscando expedientes...";
+            status.className = "text-xs mt-2 text-blue-600";
+
+            try {
+                const response = await fetch('https://api.github.com/gists', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || "Error al cargar los Gists");
+                }
+
+                const gists = await response.json();
+                
+                // Filtrar gists que contengan "PRA" en la descripción
+                const praGists = gists.filter(gist => 
+                    gist.description && gist.description.includes('PRA para')
+                );
+
+                if (praGists.length === 0) {
+                    status.textContent = "ℹ️ No se encontraron expedientes PRA.";
+                    status.className = "text-xs mt-2 text-blue-600";
+                    gistList.classList.add('hidden');
+                    return;
+                }
+
+                // Mostrar lista de gists
+                gistOptions.innerHTML = '';
+                praGists.forEach(gist => {
+                    const gistItem = document.createElement('div');
+                    gistItem.className = 'gist-item p-3 border border-slate-200 rounded text-sm cursor-pointer hover:bg-slate-50 flex justify-between items-start';
+                    
+                    const gistContent = document.createElement('div');
+                    gistContent.className = 'flex-1';
+                    gistContent.innerHTML = `
+                        <div class="font-medium">${gist.description.replace('PRA para ', '')}</div>
+                        <div class="text-xs text-slate-500 mt-1">Actualizado: ${new Date(gist.updated_at).toLocaleDateString()} • ID: ${gist.id.substring(0, 8)}...</div>
+                    `;
+                    
+                    const gistActions = document.createElement('div');
+                    gistActions.className = 'gist-actions flex gap-1 ml-2';
+                    gistActions.innerHTML = `
+                        <button onclick="event.stopPropagation(); renameGist('${gist.id}', '${gist.description}')" class="p-1 text-blue-600 hover:text-blue-800 rounded" title="Renombrar">
+                            <i data-lucide="edit-2" class="w-3 h-3"></i>
+                        </button>
+                        <button onclick="event.stopPropagation(); deleteGist('${gist.id}', '${gist.description}')" class="p-1 text-red-600 hover:text-red-800 rounded" title="Eliminar">
+                            <i data-lucide="trash-2" class="w-3 h-3"></i>
+                        </button>
+                    `;
+                    
+                    gistItem.appendChild(gistContent);
+                    gistItem.appendChild(gistActions);
+                    
+                    gistItem.addEventListener('click', () => loadGistData(gist.id, token));
+                    gistOptions.appendChild(gistItem);
+                });
+
+                // Actualizar iconos de Lucide
+                setTimeout(() => {
+                    lucide.createIcons();
+                }, 100);
+
+                gistList.classList.remove('hidden');
+                status.textContent = `✅ Se encontraron ${praGists.length} expedientes. Selecciona uno para cargar.`;
+                status.className = "text-xs mt-2 text-green-600";
+
+            } catch (error) {
+                console.error(error);
+                status.textContent = "❌ Error al cargar los expedientes. Verifica tu token.";
+                status.className = "text-xs mt-2 text-red-600 font-bold";
+            }
+        }
+
+        async function loadGistData(gistId, token) {
+            const status = document.getElementById('load-status');
+            
+            try {
+                const response = await fetch(`https://api.github.com/gists/${gistId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || "Error al cargar el Gist");
+                }
+
+                const gist = await response.json();
+                const filename = Object.keys(gist.files)[0];
+                const content = JSON.parse(gist.files[filename].content);
+                
+                // Guardar el ID del Gist para actualizarlo después
+                currentGistId = gistId;
+                
+                // Rellenar datos del alumno
+                const nombreCompleto = content.alumno.split(' ');
+                document.getElementById('nombre').value = nombreCompleto[0] || '';
+                document.getElementById('apellido1').value = nombreCompleto[1] || '';
+                document.getElementById('apellido2').value = nombreCompleto[2] || '';
+                document.getElementById('grupo').value = content.curso;
+                updateTutor();
+                
+                // Cargar tipos de PRA
+                if (content.tipo_pra) {
+                    praMateriaPendiente = content.tipo_pra.materia_pendiente || false;
+                    praRepeticion = content.tipo_pra.repeticion || false;
+                    document.getElementById('pra-materia-pendiente').checked = praMateriaPendiente;
+                    document.getElementById('pra-repeticion').checked = praRepeticion;
+                }
+                
+                // Cargar si cursa TEC4
+                if (content.cursaTEC4 !== undefined) {
+                    cursaTEC4 = content.cursaTEC4;
+                    document.getElementById('cursa-tec4').checked = cursaTEC4;
+                }
+                
+                // Cargar texto de tareas
+                if (content.tareasText) {
+                    tareasText = content.tareasText;
+                }
+                
+                // Limpiar selecciones anteriores
+                selectedSubjects.forEach(subject => {
+                    const checkbox = document.getElementById(`subject-${subject}`);
+                    if (checkbox) checkbox.checked = false;
+                    const subjectCard = document.querySelector(`[data-subject="${subject}"]`);
+                    if (subjectCard) subjectCard.classList.remove('active');
+                });
+                
+                // Limpiar criterios anteriores
+                selectedSubjects = [];
+                selectedPendingCriteria = [];
+                document.getElementById('criteria-lists').innerHTML = '';
+                
+                // Cargar materias seleccionadas
+                if (content.materias_pendientes) {
+                    content.materias_pendientes.forEach(subject => {
+                        selectedSubjects.push(subject);
+                        const checkbox = document.getElementById(`subject-${subject}`);
+                        if (checkbox) checkbox.checked = true;
+                        const subjectCard = document.querySelector(`[data-subject="${subject}"]`);
+                        if (subjectCard) subjectCard.classList.add('active');
+                        loadSubjectCriteria(subject);
+                    });
+                }
+                
+                // Cargar criterios seleccionados
+                if (content.criterios_pendientes) {
+                    Object.keys(content.criterios_pendientes).forEach(subject => {
+                        content.criterios_pendientes[subject].forEach(criterionId => {
+                            selectedPendingCriteria.push({ subject, criterionId });
+                        });
+                    });
+                }
+                
+                // Cargar propuesta de actividades si no cursa TEC4
+                if (!cursaTEC4 && content.propuesta_actividades) {
+                    document.getElementById('propuesta-actividades').value = content.propuesta_actividades;
+                }
+                
+                // Cargar campos adicionales solo si cursa TEC4
+                if (cursaTEC4 && content.metodologia) {
+                    selectedAdditionalFields = content.metodologia;
+                    
+                    // Marcar checkboxes en la pantalla 3
+                    setTimeout(() => {
+                        for (const [section, items] of Object.entries(selectedAdditionalFields)) {
+                            items.forEach(item => {
+                                const checkbox = document.getElementById(`${section}-${item.replace(/\s+/g, '-')}`);
+                                if (checkbox) {
+                                    checkbox.checked = true;
+                                    // Si es "Tareas (precisar)", mostrar el textarea
+                                    if (item === "Tareas (precisar)" && tareasText) {
+                                        const textareaContainer = document.getElementById('tareas-textarea-container');
+                                        const textarea = document.getElementById('tareas-text');
+                                        if (textareaContainer && textarea) {
+                                            textareaContainer.classList.add('show');
+                                            textarea.value = tareasText;
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }, 100);
+                }
+                
+                // Actualizar UI
+                document.getElementById('selected-subjects-count').textContent = selectedSubjects.length;
+                if (selectedSubjects.length > 0) {
+                    document.getElementById('criteria-container').classList.remove('hidden');
+                }
+                updateCalculateButton();
+                
+                // Reordenar las secciones de criterios
+                reorderCriteriaSections();
+                
+                // Marcar checkboxes de criterios
+                setTimeout(() => {
+                    selectedPendingCriteria.forEach(item => {
+                        const checkbox = document.querySelector(`input[value="${item.criterionId}"][data-subject="${item.subject}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            const criteriaContent = checkbox.closest('.criteria-checkbox').querySelector('.criteria-content');
+                            if (criteriaContent) {
+                                criteriaContent.classList.add('bg-blue-50', 'border-blue-500', 'text-blue-700');
+                            }
+                        }
+                    });
+                }, 100);
+                
+                status.textContent = "✅ Expediente cargado correctamente.";
+                status.className = "text-xs mt-2 text-green-600 font-bold";
+                
+                // Ocultar lista de gists
+                document.getElementById('gist-list').classList.add('hidden');
+                
+            } catch (error) {
+                console.error(error);
+                status.textContent = "❌ Error al cargar el expediente.";
+                status.className = "text-xs mt-2 text-red-600 font-bold";
+            }
+        }
+
+        // Inicializar
+        init();
+    </script>
+</body>
+</html>
